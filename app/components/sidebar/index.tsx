@@ -34,6 +34,10 @@ const Sidebar: FC<ISidebarProps> = ({
     <div
       className="shrink-0 flex flex-col overflow-y-auto bg-white pc:w-[244px] tablet:w-[192px] mobile:w-[240px]  border-r border-gray-200 tablet:h-[calc(100vh_-_3rem)] mobile:h-screen"
     >
+      <div className="flex items-center space-x-2 px-4 pt-4 pb-2 border-b border-gray-100">
+        <img src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png" alt="Logo" className="w-6 h-6 object-contain shrink-0" />
+        <span className="font-semibold text-sm text-gray-800 truncate">Studio Álvaro Díaz</span>
+      </div>
       {list.length < MAX_CONVERSATION_LENTH && (
         <div className="flex flex-shrink-0 p-4 !pb-0">
           <Button

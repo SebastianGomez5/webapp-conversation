@@ -12,9 +12,13 @@ import Button from '@/app/components/base/button'
 
 export const AppInfoComp: FC<{ siteInfo: AppInfo }> = ({ siteInfo }) => {
   const { t } = useTranslation()
+  const logoUrl = siteInfo.icon_url || 'https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png'
   return (
     <div>
-      <div className='flex items-center py-2 text-xl font-medium text-gray-700 rounded-md'>👏 {t('app.common.welcome')} {siteInfo.title}</div>
+      <div className='flex items-center space-x-3 py-2 text-xl font-medium text-gray-700 rounded-md'>
+        {logoUrl && <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain shrink-0" />}
+        <span>👏 {t('app.common.welcome')} {siteInfo.title}</span>
+      </div>
       <p className='text-sm text-gray-500'>{siteInfo.description}</p>
     </div>
   )
@@ -71,5 +75,9 @@ export const EditBtn = ({ className, onClick }: { className?: string, onClick: (
 }
 
 export const FootLogo = () => (
-  <div className={s.logo} />
+  <img
+    src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png"
+    alt="Studio Álvaro Díaz"
+    className="h-6 w-auto object-contain"
+  />
 )
