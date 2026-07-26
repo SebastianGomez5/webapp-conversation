@@ -265,6 +265,7 @@ const Main: FC<IMainProps> = () => {
           ...file_upload?.image,
           enabled: !!(outerFileUploadEnabled && file_upload?.image?.enabled),
           image_file_size_limit: system_parameters?.system_parameters || 0,
+          transfer_methods: file_upload?.image?.transfer_methods || [TransferMethod.local_file],
         })
         setFileConfig({
           enabled: outerFileUploadEnabled,

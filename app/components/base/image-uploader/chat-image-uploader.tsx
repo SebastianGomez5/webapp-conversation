@@ -46,7 +46,7 @@ interface UploaderButtonProps {
   limit?: number
 }
 const UploaderButton: FC<UploaderButtonProps> = ({
-  methods,
+  methods = [],
   onUpload,
   disabled,
   limit,
@@ -54,7 +54,7 @@ const UploaderButton: FC<UploaderButtonProps> = ({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
-  const hasUploadFromLocal = methods.find(method => method === TransferMethod.local_file)
+  const hasUploadFromLocal = methods?.find(method => method === TransferMethod.local_file)
 
   const handleUpload = (imageFile: ImageFile) => {
     setOpen(false)
@@ -124,24 +124,25 @@ const ChatImageUploader: FC<ChatImageUploaderProps> = ({
   onUpload,
   disabled,
 }) => {
-  const onlyUploadLocal = settings.transfer_methods.length === 1 && settings.transfer_methods[0] === TransferMethod.local_file
+  const transferMethods = settings?.transfer_methods || [TransferMethod.local_file]
+  const onlyUploadLocal = transferMethods.length === 1 && transferMethods[0] === TransferMethod.local_file
 
   if (onlyUploadLocal) {
     return (
       <UploadOnlyFromLocal
         onUpload={onUpload}
         disabled={disabled}
-        limit={+settings.image_file_size_limit!}
+        limit={+(settings?.image_file_size_limit ?? 0)}
       />
     )
   }
 
   return (
     <UploaderButton
-      methods={settings.transfer_methods}
+      methods={transferMethods}
       onUpload={onUpload}
       disabled={disabled}
-      limit={+settings.image_file_size_limit!}
+      limit={+(settings?.image_file_size_limit ?? 0)}
     />
   )
 }
