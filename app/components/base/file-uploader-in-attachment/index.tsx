@@ -15,7 +15,6 @@ import {
 } from './store'
 import FileInput from './file-input'
 import FileItem from './file-item'
-import Button from '@/app/components/base/button'
 import cn from '@/utils/classnames'
 import { TransferMethod } from '@/types/app'
 
@@ -50,21 +49,24 @@ const FileUploaderInAttachment = ({
   ]
 
   const renderButton = useCallback((option: Option, open?: boolean) => {
+    const disabled = !!(fileConfig.number_limits && files.length >= fileConfig.number_limits)
     return (
-      <Button
+      <div
         key={option.value}
-        // variant='tertiary'
-        className={cn('relative grow', open && 'bg-components-button-tertiary-bg-hover')}
-        disabled={!!(fileConfig.number_limits && files.length >= fileConfig.number_limits)}
+        className={cn(
+          'relative flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors select-none',
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+          open && 'bg-gray-100 text-gray-700',
+        )}
+        title={option.label}
       >
         {option.icon}
-        <span className='ml-1'>{option.label}</span>
         {
-          option.value === TransferMethod.local_file && (
+          option.value === TransferMethod.local_file && !disabled && (
             <FileInput fileConfig={fileConfig} />
           )
         }
-      </Button>
+      </div>
     )
   }, [fileConfig, files.length])
   const renderTrigger = useCallback((option: Option) => {

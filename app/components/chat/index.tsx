@@ -147,6 +147,15 @@ const Chat: FC<IChatProps> = ({
     handleSend()
   }
 
+  const iconCount = (visionConfig?.enabled ? 1 : 0) + (fileConfig?.enabled ? (fileConfig?.allowed_file_upload_methods?.length || 2) : 0)
+  const textareaLeftPadding = iconCount === 0
+    ? 'pl-2'
+    : iconCount === 1
+      ? 'pl-12'
+      : iconCount === 2
+        ? 'pl-[84px]'
+        : 'pl-[120px]'
+
   return (
     <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
       {/* Chat List */}
@@ -177,45 +186,44 @@ const Chat: FC<IChatProps> = ({
       {
         !isHideSendInput && (
           <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
-            <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
+            <div className='relative p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
               {
-                visionConfig?.enabled && (
-                  <>
-                    <div className='absolute bottom-2 left-2 flex items-center'>
-                      <ChatImageUploader
-                        settings={visionConfig}
-                        onUpload={onUpload}
-                        disabled={files.length >= visionConfig.number_limits}
-                      />
-                      <div className='mx-1 w-[1px] h-4 bg-black/5' />
-                    </div>
-                    <div className='pl-[52px]'>
-                      <ImageList
-                        list={files}
-                        onRemove={onRemove}
-                        onReUpload={onReUpload}
-                        onImageLinkLoadSuccess={onImageLinkLoadSuccess}
-                        onImageLinkLoadError={onImageLinkLoadError}
-                      />
-                    </div>
-                  </>
+                visionConfig?.enabled && files.length > 0 && (
+                  <div className='pl-2 mb-1'>
+                    <ImageList
+                      list={files}
+                      onRemove={onRemove}
+                      onReUpload={onReUpload}
+                      onImageLinkLoadSuccess={onImageLinkLoadSuccess}
+                      onImageLinkLoadError={onImageLinkLoadError}
+                    />
+                  </div>
                 )
               }
-              {
-                fileConfig?.enabled && (
-                  <div className={`${visionConfig?.enabled ? 'pl-[52px]' : ''} mb-1`}>
+              <div className='absolute bottom-2 left-2 flex items-center space-x-1 z-10'>
+                {
+                  visionConfig?.enabled && (
+                    <ChatImageUploader
+                      settings={visionConfig}
+                      onUpload={onUpload}
+                      disabled={files.length >= visionConfig.number_limits}
+                    />
+                  )
+                }
+                {
+                  fileConfig?.enabled && (
                     <FileUploaderInAttachmentWrapper
                       fileConfig={fileConfig}
                       value={attachmentFiles}
                       onChange={setAttachmentFiles}
                     />
-                  </div>
-                )
-              }
+                  )
+                }
+              </div>
               <Textarea
                 className={`
                   block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none
-                  ${visionConfig?.enabled && 'pl-12'}
+                  ${textareaLeftPadding}
                 `}
                 value={query}
                 onChange={handleContentChange}
