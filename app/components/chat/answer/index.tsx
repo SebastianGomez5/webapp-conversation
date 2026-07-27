@@ -173,6 +173,9 @@ const Answer: FC<IAnswerProps> = ({
           )}
         </div>
       ))}
+      {content && (
+        <StreamdownMarkdown content={content} />
+      )}
     </div>
   )
 

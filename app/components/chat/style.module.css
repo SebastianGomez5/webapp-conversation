@@ -1,6 +1,8 @@
 .answerIcon {
   position: relative;
-  background: url(./icons/robot.svg);
+  background: url(https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg) no-repeat center center;
+  background-size: cover;
+  border-radius: 50%;
 }
 
 .typeingIcon {
