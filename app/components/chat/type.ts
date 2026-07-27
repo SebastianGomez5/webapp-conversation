@@ -41,6 +41,8 @@ export interface ToolInfoInThought {
   input: string
   output: string
   isFinished: boolean
+  latency?: number
+  created_at?: number
 }
 
 export interface ThoughtItem {
@@ -53,6 +55,8 @@ export interface ThoughtItem {
   position: number
   files?: string[]
   message_files?: VisionFile[]
+  latency?: number
+  created_at?: number
 }
 
 export interface CitationItem {

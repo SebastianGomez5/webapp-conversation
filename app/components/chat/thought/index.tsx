@@ -42,6 +42,8 @@ const Thought: FC<IThoughtProps> = ({
       input: getValue(thought.tool_input, isValueArray, index),
       output: getValue(thought.observation, isValueArray, index),
       isFinished,
+      latency: thought.latency,
+      created_at: thought.created_at,
     }
   })
 

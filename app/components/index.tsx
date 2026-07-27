@@ -497,6 +497,7 @@ const Main: FC<IMainProps> = () => {
         }
         // responseItem.id = thought.message_id;
         if (response.agent_thoughts.length === 0) {
+          if (!thought.created_at) { thought.created_at = Math.floor(Date.now() / 1000) }
           response.agent_thoughts.push(thought)
         }
         else {
@@ -505,9 +506,15 @@ const Main: FC<IMainProps> = () => {
           if (lastThought.id === thought.id) {
             thought.thought = lastThought.thought
             thought.message_files = lastThought.message_files
+            thought.created_at = lastThought.created_at || Math.floor(Date.now() / 1000)
+            if (!thought.latency && thought.observation && thought.created_at) {
+              const startMs = thought.created_at > 1e11 ? thought.created_at : thought.created_at * 1000
+              thought.latency = Number(((Date.now() - startMs) / 1000).toFixed(2))
+            }
             responseItem.agent_thoughts![response.agent_thoughts.length - 1] = thought
           }
           else {
+            if (!thought.created_at) { thought.created_at = Math.floor(Date.now() / 1000) }
             responseItem.agent_thoughts!.push(thought)
           }
         }
