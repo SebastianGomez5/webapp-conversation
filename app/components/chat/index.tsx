@@ -18,6 +18,7 @@ import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
 import FileUploaderInAttachmentWrapper from '@/app/components/base/file-uploader-in-attachment'
 import type { FileEntity, FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { getProcessedFiles } from '@/app/components/base/file-uploader-in-attachment/utils'
+import SpeechToText from '@/app/components/base/speech-to-text'
 
 export interface IChatProps {
   chatList: ChatItem[]
@@ -147,14 +148,16 @@ const Chat: FC<IChatProps> = ({
     handleSend()
   }
 
-  const iconCount = (visionConfig?.enabled ? 1 : 0) + (fileConfig?.enabled ? (fileConfig?.allowed_file_upload_methods?.length || 2) : 0)
+  const iconCount = (visionConfig?.enabled ? 1 : 0) + (fileConfig?.enabled ? (fileConfig?.allowed_file_upload_methods?.length || 2) : 0) + 1
   const textareaLeftPadding = iconCount === 0
     ? 'pl-2'
     : iconCount === 1
       ? 'pl-12'
       : iconCount === 2
         ? 'pl-[84px]'
-        : 'pl-[120px]'
+        : iconCount === 3
+          ? 'pl-[120px]'
+          : 'pl-[156px]'
 
   return (
     <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
@@ -219,6 +222,14 @@ const Chat: FC<IChatProps> = ({
                     />
                   )
                 }
+                <SpeechToText
+                  currentValue={query}
+                  onValueChange={(val) => {
+                    setQuery(val)
+                    queryRef.current = val
+                  }}
+                  disabled={isResponding}
+                />
               </div>
               <Textarea
                 className={`
