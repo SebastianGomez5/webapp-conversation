@@ -151,6 +151,14 @@ const Answer: FC<IAnswerProps> = ({
     return list.filter(file => file.type === 'image' && file.belongs_to === 'assistant')
   }
 
+  const lastToolIndex = (() => {
+    if (!agent_thoughts) { return -1 }
+    for (let i = agent_thoughts.length - 1; i >= 0; i--) {
+      if (agent_thoughts[i].tool) { return i }
+    }
+    return -1
+  })()
+
   const agentModeAnswer = (
     <div>
       {agent_thoughts?.map((item, index) => (
@@ -160,7 +168,7 @@ const Answer: FC<IAnswerProps> = ({
           )}
           {/* {item.tool} */}
           {/* perhaps not use tool */}
-          {!!item.tool && (
+          {!!item.tool && index === lastToolIndex && (
             <Thought
               thought={item}
               allToolIcons={allToolIcons || {}}
