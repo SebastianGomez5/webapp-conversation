@@ -64,8 +64,8 @@ export const SpeechToText: FC<SpeechToTextProps> = ({
   const transcribeAudioBlob = async (blob: Blob) => {
     try {
       const formData = new FormData()
-      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
-      formData.append('file', blob, `recording.${ext}`)
+      const audioFile = new File([blob], 'speech.mp3', { type: 'audio/mp3' })
+      formData.append('file', audioFile, 'speech.mp3')
 
       const res = await fetch('/api/audio-to-text', {
         method: 'POST',
