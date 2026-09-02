@@ -1,41 +1,79 @@
 'use client'
 import type { FC } from 'react'
 import React from 'react'
-import type { IChatItem } from '../type'
-import s from '../style.module.css'
-
-import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
+import { FileText } from 'lucide-react'
 import ImageGallery from '@/app/components/base/image-gallery'
+import type { VisionFile } from '@/types/app'
 
-type IQuestionProps = Pick<IChatItem, 'id' | 'content' | 'useCurrentUserAvatar'> & {
+interface IQuestionProps {
+  id: string
+  content: string
+  timestamp?: string
   imgSrcs?: string[]
+  message_files?: VisionFile[]
+  darkMode?: boolean
 }
 
-const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSrcs }) => {
-  const userName = ''
+const Question: FC<IQuestionProps> = ({
+  id,
+  content,
+  timestamp,
+  imgSrcs = [],
+  message_files = [],
+  darkMode = true,
+}) => {
+  const images = (imgSrcs.length > 0
+    ? imgSrcs
+    : message_files.filter(f => f.type === 'image' || !f.type).map(f => f.url).filter(Boolean)) as string[]
+
+  const docFiles = message_files.filter(f => f.type !== 'image' && f.type)
+
   return (
-    <div className='flex items-start justify-end' key={id}>
-      <div>
-        <div className={`${s.question} relative text-sm text-gray-900`}>
-          <div
-            className={'mr-2 py-3 px-4 bg-blue-500 rounded-tl-2xl rounded-b-2xl'}
-          >
-            {imgSrcs && imgSrcs.length > 0 && (
-              <ImageGallery srcs={imgSrcs} />
-            )}
-            <StreamdownMarkdown content={content} />
-          </div>
+    <div key={id} className="flex gap-4 max-w-4xl mx-auto justify-end w-full">
+      <div className="flex flex-col space-y-1.5 max-w-[85%] sm:max-w-[75%] items-end">
+        {/* Burbuja Principal */}
+        <div
+          className={`relative px-4 py-3.5 rounded-2xl text-sm leading-relaxed ${
+            darkMode
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm shadow-md'
+              : 'bg-slate-900 text-white rounded-tr-sm shadow-md'
+          }`}
+        >
+          {/* Imágenes adjuntas */}
+          {images.length > 0 && (
+            <div className="mb-2">
+              <ImageGallery srcs={images} />
+            </div>
+          )}
+
+          {/* Archivos / URLs adjuntos */}
+          {docFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {docFiles.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-black/20 text-[11px] font-mono text-emerald-100"
+                >
+                  <FileText className="h-3 w-3" />
+                  <span className="truncate max-w-[180px]">{file.url || 'Documento adjunto'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="whitespace-pre-wrap font-normal">{content}</div>
+        </div>
+
+        {/* Timestamp */}
+        <div className={`flex items-center gap-2 text-[11px] px-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          <span>{timestamp || 'Ahora'}</span>
         </div>
       </div>
-      {useCurrentUserAvatar
-        ? (
-          <div className='w-10 h-10 shrink-0 leading-10 text-center mr-2 rounded-full bg-primary-600 text-white'>
-            {userName?.[0].toLocaleUpperCase()}
-          </div>
-        )
-        : (
-          <div className={`${s.questionIcon} w-10 h-10 shrink-0 `}></div>
-        )}
+
+      {/* Avatar del Usuario */}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold shadow-md select-none">
+        AD
+      </div>
     </div>
   )
 }

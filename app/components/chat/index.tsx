@@ -1,265 +1,487 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef } from 'react'
-import cn from 'classnames'
-import { useTranslation } from 'react-i18next'
-import Textarea from 'rc-textarea'
-import s from './style.module.css'
+import React, { useRef, useState } from 'react'
+import {
+  Paperclip,
+  Globe,
+  Mic,
+  MicOff,
+  CornerDownLeft,
+  ChevronDown,
+  FileText,
+  X,
+  RefreshCw,
+} from 'lucide-react'
+import type { FeedbackFunc } from './type'
 import Answer from './answer'
 import Question from './question'
-import type { FeedbackFunc } from './type'
 import type { ChatItem, VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
-import Tooltip from '@/app/components/base/tooltip'
-import Toast from '@/app/components/base/toast'
-import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
-import ImageList from '@/app/components/base/image-uploader/image-list'
+import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
-import FileUploaderInAttachmentWrapper from '@/app/components/base/file-uploader-in-attachment'
-import type { FileEntity, FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
-import { getProcessedFiles } from '@/app/components/base/file-uploader-in-attachment/utils'
-import SpeechToText from '@/app/components/base/speech-to-text'
 
 export interface IChatProps {
   chatList: ChatItem[]
-  /**
-   * Whether to display the editing area and rating status
-   */
   feedbackDisabled?: boolean
-  /**
-   * Whether to display the input area
-   */
-  isHideSendInput?: boolean
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
   onSend?: (message: string, files: VisionFile[]) => void
-  useCurrentUserAvatar?: boolean
   isResponding?: boolean
-  controlClearQuery?: number
+  darkMode?: boolean
+  selectedSkill: any
+  setSelectedSkill: (skill: any) => void
+  skills: any[]
+  documentTemplates: any[]
+  selectedDocTemplate: any
+  setSelectedDocTemplate: (doc: any) => void
+  isSpeakingMessageId: string | null
+  onSpeakToggle: (text: string, messageId: string) => void
+  isRecordingAudio: boolean
+  onToggleSpeechRecognition: () => void
+  onOpenUrlModal: () => void
   visionConfig?: VisionSettings
   fileConfig?: FileUpload
+  inputText: string
+  setInputText: (text: string) => void
 }
 
 const Chat: FC<IChatProps> = ({
   chatList,
   feedbackDisabled = false,
-  isHideSendInput = false,
   onFeedback,
   checkCanSend,
   onSend = () => { },
-  useCurrentUserAvatar,
   isResponding,
-  controlClearQuery,
-  visionConfig,
-  fileConfig,
+  darkMode = true,
+  selectedSkill,
+  setSelectedSkill,
+  skills,
+  documentTemplates,
+  selectedDocTemplate,
+  setSelectedDocTemplate,
+  isSpeakingMessageId,
+  onSpeakToggle,
+  isRecordingAudio,
+  onToggleSpeechRecognition,
+  onOpenUrlModal,
+  inputText,
+  setInputText,
 }) => {
-  const { t } = useTranslation()
-  const { notify } = Toast
-  const isUseInputMethod = useRef(false)
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [query, setQuery] = React.useState('')
-  const queryRef = useRef('')
-
-  const handleContentChange = (e: any) => {
-    const value = e.target.value
-    setQuery(value)
-    queryRef.current = value
-  }
-
-  const logError = (message: string) => {
-    notify({ type: 'error', message, duration: 3000 })
-  }
-
-  const valid = () => {
-    const query = queryRef.current
-    if (!query || query.trim() === '') {
-      logError(t('app.errorMessage.valueOfVarRequired'))
-      return false
-    }
-    return true
-  }
-
-  useEffect(() => {
-    if (controlClearQuery) {
-      setQuery('')
-      queryRef.current = ''
-    }
-  }, [controlClearQuery])
   const {
-    files,
-    onUpload,
-    onRemove,
-    onReUpload,
-    onImageLinkLoadError,
-    onImageLinkLoadSuccess,
-    onClear,
+    files: attachedImageFiles,
+    onUpload: onUploadImage,
+    onRemove: onRemoveImage,
+    onClear: onClearImages,
   } = useImageFiles()
 
-  const [attachmentFiles, setAttachmentFiles] = React.useState<FileEntity[]>([])
+  const [customAttachedFiles, setCustomAttachedFiles] = useState<Array<{ name: string, type: string, url?: string }>>([])
 
-  const handleSend = () => {
-    if (!valid() || (checkCanSend && !checkCanSend())) { return }
-    const hasPendingImageUploads = files.some(file => file.progress !== -1 && file.progress < 100)
-    const hasPendingAttachmentUploads = attachmentFiles.some(file => file.progress !== -1 && file.progress < 100)
-    if (hasPendingImageUploads || hasPendingAttachmentUploads) {
-      logError(t('app.errorMessage.waitForFileUpload'))
-      return
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFiles = Array.from(e.target.files || [])
+    if (rawFiles.length > 0) {
+      // Process image files via useImageFiles or custom
+      rawFiles.forEach((f) => {
+        if (f.type.includes('image')) {
+          onUploadImage({
+            id: `${Date.now()}-${Math.random()}`,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            file: f,
+            progress: 0,
+          })
+        }
+        else {
+          setCustomAttachedFiles(prev => [
+            ...prev,
+            { name: f.name, type: 'doc', url: f.name },
+          ])
+        }
+      })
     }
-    const imageFiles: VisionFile[] = files.filter(file => file.progress !== -1).map(fileItem => ({
-      type: 'image',
-      transfer_method: fileItem.type,
-      url: fileItem.url,
-      upload_file_id: fileItem.fileId,
-    }))
-    const docAndOtherFiles: VisionFile[] = getProcessedFiles(attachmentFiles)
-    const combinedFiles: VisionFile[] = [...imageFiles, ...docAndOtherFiles]
-    onSend(queryRef.current, combinedFiles)
-    if (!files.find(item => item.type === TransferMethod.local_file && !item.fileId)) {
-      if (files.length) { onClear() }
-      if (!isResponding) {
-        setQuery('')
-        queryRef.current = ''
-      }
-    }
-    if (!attachmentFiles.find(item => item.transferMethod === TransferMethod.local_file && !item.uploadedId)) { setAttachmentFiles([]) }
+    if (fileInputRef.current) { fileInputRef.current.value = '' }
   }
 
-  const handleKeyUp = (e: any) => {
-    if (e.code === 'Enter') {
-      e.preventDefault()
-      // prevent send message when using input method enter
-      if (!e.shiftKey && !isUseInputMethod.current) { handleSend() }
-    }
-  }
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (isResponding) { return }
 
-  const handleKeyDown = (e: any) => {
-    isUseInputMethod.current = e.nativeEvent.isComposing
-    if (e.code === 'Enter' && !e.shiftKey) {
-      const result = query.replace(/\n$/, '')
-      setQuery(result)
-      queryRef.current = result
-      e.preventDefault()
-    }
-  }
+    const trimmed = inputText.trim()
+    const allFilesCount = attachedImageFiles.length + customAttachedFiles.length
 
-  const suggestionClick = (suggestion: string) => {
-    setQuery(suggestion)
-    queryRef.current = suggestion
-    handleSend()
-  }
+    if (!trimmed && allFilesCount === 0) { return }
 
-  const iconCount = (visionConfig?.enabled ? 1 : 0) + (fileConfig?.enabled ? (fileConfig?.allowed_file_upload_methods?.length || 2) : 0) + 1
-  const textareaLeftPadding = iconCount === 0
-    ? 'pl-2'
-    : iconCount === 1
-      ? 'pl-12'
-      : iconCount === 2
-        ? 'pl-[84px]'
-        : iconCount === 3
-          ? 'pl-[120px]'
-          : 'pl-[156px]'
+    if (checkCanSend && !checkCanSend()) { return }
+
+    const visionFiles: VisionFile[] = [
+      ...attachedImageFiles.map(img => ({
+        type: 'image' as const,
+        transfer_method: img.file ? TransferMethod.local_file : TransferMethod.remote_url,
+        url: img.url || '',
+        upload_file_id: img.id,
+      })),
+      ...customAttachedFiles.map(doc => ({
+        type: doc.type as any,
+        transfer_method: TransferMethod.remote_url,
+        url: doc.url || doc.name,
+      })),
+    ]
+
+    onSend(trimmed, visionFiles)
+    setInputText('')
+    onClearImages()
+    setCustomAttachedFiles([])
+  }
 
   return (
-    <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
-      {/* Chat List */}
-      <div className="h-full space-y-[30px]">
+    <div className="flex flex-col h-full w-full relative">
+      {/* Feed de Mensajes */}
+      <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 space-y-6 scrollbar-thin">
         {chatList.map((item) => {
           if (item.isAnswer) {
-            const isLast = item.id === chatList[chatList.length - 1].id
-            return <Answer
-              key={item.id}
-              item={item}
-              feedbackDisabled={feedbackDisabled}
-              onFeedback={onFeedback}
-              isResponding={isResponding && isLast}
-              suggestionClick={suggestionClick}
-            />
+            const isLast = item.id === chatList[chatList.length - 1]?.id
+            return (
+              <Answer
+                key={item.id}
+                item={item}
+                feedbackDisabled={feedbackDisabled}
+                onFeedback={onFeedback}
+                isResponding={isResponding && isLast}
+                darkMode={darkMode}
+                isSpeaking={isSpeakingMessageId === item.id}
+                onSpeakToggle={onSpeakToggle}
+              />
+            )
           }
+
           return (
             <Question
               key={item.id}
               id={item.id}
               content={item.content}
-              useCurrentUserAvatar={useCurrentUserAvatar}
-              imgSrcs={(item.message_files && item.message_files?.length > 0) ? item.message_files.map(item => item.url) : []}
+              message_files={item.message_files}
+              darkMode={darkMode}
             />
           )
         })}
-      </div>
-      {
-        !isHideSendInput && (
-          <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
-            <div className='relative p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
-              {
-                visionConfig?.enabled && files.length > 0 && (
-                  <div className='pl-2 mb-1'>
-                    <ImageList
-                      list={files}
-                      onRemove={onRemove}
-                      onReUpload={onReUpload}
-                      onImageLinkLoadSuccess={onImageLinkLoadSuccess}
-                      onImageLinkLoadError={onImageLinkLoadError}
-                    />
-                  </div>
-                )
-              }
-              <div className='absolute bottom-2 left-2 flex items-center space-x-1 z-10'>
-                {
-                  visionConfig?.enabled && (
-                    <ChatImageUploader
-                      settings={visionConfig}
-                      onUpload={onUpload}
-                      disabled={files.length >= visionConfig.number_limits}
-                    />
-                  )
-                }
-                {
-                  fileConfig?.enabled && (
-                    <FileUploaderInAttachmentWrapper
-                      fileConfig={fileConfig}
-                      value={attachmentFiles}
-                      onChange={setAttachmentFiles}
-                    />
-                  )
-                }
-                <SpeechToText
-                  currentValue={query}
-                  onValueChange={(val) => {
-                    setQuery(val)
-                    queryRef.current = val
-                  }}
-                  disabled={isResponding}
-                />
-              </div>
-              <Textarea
-                className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none
-                  ${textareaLeftPadding}
-                `}
-                value={query}
-                onChange={handleContentChange}
-                onKeyUp={handleKeyUp}
-                onKeyDown={handleKeyDown}
-                autoSize
+
+        {/* Animación de Pensamiento / Razonamiento */}
+        {isResponding && (
+          <div className="flex gap-4 max-w-4xl mx-auto justify-start w-full">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-amber-400 overflow-hidden shadow-md">
+              <img
+                src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg"
+                alt="Carlos"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none'
+                }}
               />
-              <div className="absolute bottom-2 right-6 flex items-center h-8">
-                <div className={`${s.count} mr-3 h-5 leading-5 text-sm bg-gray-50 text-gray-500 px-2 rounded`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
-                  }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
+            </div>
+            <div
+              className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-mono ${
+                darkMode
+                  ? 'bg-slate-900/70 border border-slate-800 text-slate-400'
+                  : 'bg-white border border-slate-200 text-slate-500'
+              }`}
+            >
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
+              <span>Consultando MCP & ejecutando razonamiento...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dock de Entrada Futurista (Centro de Mando) */}
+      <div className="p-4 md:px-12 md:pb-6 z-10 shrink-0">
+        {/* Barra de opciones si la habilidad es Generador de Documentos */}
+        {selectedSkill?.id === 'doc_gen' && (
+          <div className="max-w-4xl mx-auto mb-2 px-1">
+            <div
+              className={`p-2.5 rounded-xl border backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 ${
+                darkMode
+                  ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold shrink-0">
+                <FileText className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Elige un tipo de documento para generar:</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                {documentTemplates.map(doc => (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDocTemplate(doc)
+                      setInputText(doc.prompt)
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border ${
+                      selectedDocTemplate?.id === doc.id
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-semibold shadow-sm'
+                        : darkMode
+                          ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-200 border-slate-700/60'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    {doc.badge}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-        )
-      }
+        )}
+
+        <div
+          className={`relative max-w-4xl mx-auto rounded-2xl border shadow-xl backdrop-blur-xl transition-all ${
+            darkMode
+              ? 'bg-[#111625]/95 border-slate-800 focus-within:border-emerald-500/50 shadow-black/40'
+              : 'bg-white/95 border-slate-200 focus-within:border-emerald-500 shadow-slate-200'
+          }`}
+        >
+          {/* Chips de Adjuntos Pendientes */}
+          {(attachedImageFiles.length > 0 || customAttachedFiles.length > 0) && (
+            <div className="flex flex-wrap gap-2 px-4 pt-3">
+              {attachedImageFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border ${
+                    darkMode
+                      ? 'bg-slate-800/80 border-slate-700 text-slate-200'
+                      : 'bg-slate-100 border-slate-300 text-slate-800'
+                  }`}
+                >
+                  <FileText className="h-3 w-3 text-amber-400" />
+                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  <button
+                    onClick={() => onRemoveImage(file.id)}
+                    className="hover:text-rose-400 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {customAttachedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border ${
+                    darkMode
+                      ? 'bg-slate-800/80 border-slate-700 text-slate-200'
+                      : 'bg-slate-100 border-slate-300 text-slate-800'
+                  }`}
+                >
+                  {file.type === 'url' ? <Globe className="h-3 w-3 text-cyan-400" /> : <FileText className="h-3 w-3 text-amber-400" />}
+                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  <button
+                    onClick={() => setCustomAttachedFiles(customAttachedFiles.filter((_, i) => i !== index))}
+                    className="hover:text-rose-400 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Barra de Herramientas y Habilidades */}
+          <div className="flex items-center justify-between px-4 pt-2.5 text-xs">
+            {/* Selector Desplegable de Habilidad del Chat */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSkillDropdown(!showSkillDropdown)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  darkMode
+                    ? 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/50'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {selectedSkill?.icon && <selectedSkill.icon className={`h-3.5 w-3.5 ${selectedSkill.color || 'text-emerald-400'}`} />}
+                <span>Habilidad: {selectedSkill?.name || 'General'}</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </button>
+
+              {showSkillDropdown && (
+                <div
+                  className={`absolute bottom-full mb-2 left-0 w-80 sm:w-96 rounded-2xl border p-2 shadow-2xl z-50 max-h-[75vh] overflow-y-auto scrollbar-thin ${
+                    darkMode ? 'bg-[#0E1422] border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Habilidad del Chat</div>
+
+                  <div className="space-y-1">
+                    {skills.map(s => (
+                      <div key={s.id} className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSkill(s)
+                            if (!s.isDocumentGenerator) {
+                              setSelectedDocTemplate(null)
+                              setShowSkillDropdown(false)
+                            }
+                          }}
+                          className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all ${
+                            selectedSkill?.id === s.id
+                              ? darkMode ? 'bg-slate-800/90 text-white border border-slate-700' : 'bg-slate-100 text-slate-900 border border-slate-300'
+                              : darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <s.icon className={`h-4 w-4 mt-0.5 shrink-0 ${s.color}`} />
+                          <div className="flex flex-col flex-1">
+                            <span className="text-xs font-semibold flex items-center justify-between">
+                              {s.name}
+                              {s.isDocumentGenerator && (
+                                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">3 Tipos</span>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{s.desc}</span>
+                          </div>
+                        </button>
+
+                        {/* Opciones de Documentos al seleccionar Generador */}
+                        {s.isDocumentGenerator && selectedSkill?.id === s.id && (
+                          <div className={`ml-4 pl-3 border-l-2 space-y-1.5 my-1.5 ${darkMode ? 'border-amber-500/40' : 'border-amber-400'}`}>
+                            <div className="text-[10px] font-semibold text-amber-400/90 uppercase tracking-wider">Opciones de Documento:</div>
+                            {documentTemplates.map(doc => (
+                              <button
+                                key={doc.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDocTemplate(doc)
+                                  setInputText(doc.prompt)
+                                  setShowSkillDropdown(false)
+                                }}
+                                className={`w-full text-left p-2 rounded-lg border transition-all ${
+                                  selectedDocTemplate?.id === doc.id
+                                    ? darkMode
+                                      ? 'bg-amber-500/20 border-amber-500/40 text-amber-200'
+                                      : 'bg-amber-100 border-amber-300 text-amber-900'
+                                    : darkMode
+                                      ? 'bg-slate-900/60 border-slate-800 hover:bg-slate-850 text-slate-300'
+                                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between text-[11px] font-medium">
+                                  <span>{doc.title}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/20 text-amber-400 font-mono">{doc.badge}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{doc.desc}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Indicador de Estado de Conexión */}
+            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+              <span className="flex items-center gap-1.5 font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse"></span> Conexión Amyet IA / Studio
+              </span>
+            </div>
+          </div>
+
+          {/* Caja de Texto Principal */}
+          <form onSubmit={handleSendMessage} className="p-3 pt-1">
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage()
+                }
+              }}
+              rows={2}
+              placeholder={
+                isRecordingAudio
+                  ? 'Escuchando tu voz... (habla con claridad)'
+                  : 'Escribe una instrucción, consulta de CRM o tarea de negocio...'
+              }
+              className="w-full resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-slate-500 font-normal leading-relaxed text-inherit"
+            />
+
+            {/* Botones de Acción */}
+            <div className="flex items-center justify-between pt-2 border-t border-inherit">
+              <div className="flex items-center gap-1">
+                {/* Adjuntar Documento / Imagen */}
+                <label
+                  className={`cursor-pointer p-2 rounded-lg transition-colors ${
+                    darkMode
+                      ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                  title="Subir Documento o Imagen"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* Analizar URL Web */}
+                <button
+                  type="button"
+                  onClick={onOpenUrlModal}
+                  className={`p-2 rounded-lg transition-colors ${
+                    darkMode
+                      ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                      : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                  title="Analizar Página Web o API"
+                >
+                  <Globe className="h-4 w-4" />
+                </button>
+
+                {/* Grabación de Voz (STT) */}
+                <button
+                  type="button"
+                  onClick={onToggleSpeechRecognition}
+                  className={`p-2 rounded-lg transition-all ${
+                    isRecordingAudio
+                      ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30'
+                      : darkMode
+                        ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'hover:bg-slate-100 text-slate-600'
+                  }`}
+                  title={isRecordingAudio ? 'Detener dictado' : 'Dictar por voz'}
+                >
+                  {isRecordingAudio ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Botón Ejecutar */}
+              <button
+                type="submit"
+                disabled={(!inputText.trim() && attachedImageFiles.length === 0 && customAttachedFiles.length === 0) || isResponding}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-md ${
+                  (inputText.trim() || attachedImageFiles.length > 0 || customAttachedFiles.length > 0) && !isResponding
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/20 cursor-pointer'
+                    : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-700/30'
+                }`}
+              >
+                <span>Ejecutar</span>
+                <CornerDownLeft className="h-3 w-3" />
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }

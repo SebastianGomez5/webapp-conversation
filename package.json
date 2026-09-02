@@ -40,6 +40,7 @@
     "js-cookie": "^3.0.1",
     "katex": "^0.16.21",
     "lodash-es": "^4.17.21",
+    "lucide-react": "^1.39.0",
     "mime": "^4.0.7",
     "negotiator": "^0.6.3",
     "next": "^15.5.9",
