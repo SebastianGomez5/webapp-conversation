@@ -344,12 +344,6 @@ const Main: FC<IMainProps> = () => {
   // --- Carga Inicial de Parámetros ---
   useEffect(() => {
     (async () => {
-      const isValidConfig = APP_ID && API_KEY && APP_ID !== 'undefined' && API_KEY !== 'undefined'
-      if (!isValidConfig) {
-        setAppUnavailable(true)
-        return
-      }
-
       try {
         const [appParams, resConvs]: any = await Promise.all([
           fetchAppParams().catch(() => ({})),
@@ -363,8 +357,14 @@ const Main: FC<IMainProps> = () => {
             : []
 
         const { user_input_form, file_upload, system_parameters }: any = appParams || {}
-        const _conversationId = getConversationIdFromStorage(APP_ID)
-        const isNotNewConversation = conversations.some((c: any) => c.id === _conversationId)
+        let _conversationId: string | null = null
+        try {
+          _conversationId = getConversationIdFromStorage(APP_ID)
+        }
+        catch (e) {
+          // ignore
+        }
+        const isNotNewConversation = _conversationId ? conversations.some((c: any) => c.id === _conversationId) : false
 
         const prompt_variables = userInputsFormToPromptVariables(user_input_form || [])
         setPromptConfig({
@@ -389,7 +389,7 @@ const Main: FC<IMainProps> = () => {
         })
         setConversationList(conversations)
 
-        if (isNotNewConversation) {
+        if (isNotNewConversation && _conversationId) {
           setCurrConversationId(_conversationId, APP_ID, false)
         }
         else {
@@ -399,7 +399,12 @@ const Main: FC<IMainProps> = () => {
         setInited(true)
       }
       catch (e: any) {
-        setAppUnavailable(true)
+        setPromptConfig({
+          prompt_template: promptTemplate,
+          prompt_variables: [],
+        } as PromptConfig)
+        setChatList(generateNewChatListWithOpenStatement())
+        setInited(true)
       }
     })()
   }, [])
