@@ -60,37 +60,48 @@ const Answer: FC<IAnswerProps> = ({
 
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
 
+  // Mostrar un único log dinámico de la herramienta activa o la última ejecutada
+  const toolThoughts = (agent_thoughts || []).filter(item => !!item.tool)
+  const latestToolThought = toolThoughts[toolThoughts.length - 1]
+
+  // Recolectar imágenes generadas por el asistente
+  const assistantImages = (agent_thoughts || []).flatMap(item => getImgs(item.message_files))
+
+  // Último texto de pensamiento si está presente y aún no hay respuesta final
+  const thoughtsWithText = (agent_thoughts || []).filter(item => !!item.thought)
+  const latestTextThought = thoughtsWithText[thoughtsWithText.length - 1]
+
   const agentModeAnswer = (
     <div className="space-y-2">
-      {agent_thoughts?.map((thoughtItem, index) => (
-        <div key={index} className="space-y-1">
-          {thoughtItem.thought && (
-            <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border flex items-center gap-2 ${
-              darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-            }`}>
-              <Cpu className="h-3.5 w-3.5 text-cyan-400 animate-spin shrink-0" />
-              <div className="flex-1 overflow-hidden">
-                <StreamdownMarkdown content={thoughtItem.thought} />
-              </div>
-            </div>
-          )}
-
-          {!!thoughtItem.tool && (
-            <Thought
-              thought={thoughtItem}
-              allToolIcons={allToolIcons || {}}
-              isFinished={!!thoughtItem.observation || !isResponding}
-            />
-          )}
-
-          {getImgs(thoughtItem.message_files).length > 0 && (
-            <div className="mt-2">
-              <ImageGallery srcs={getImgs(thoughtItem.message_files).map(f => f.url)} />
-            </div>
-          )}
+      {/* Texto de razonamiento preliminar (si existe y no ha comenzado el content) */}
+      {latestTextThought?.thought && !content && (
+        <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border flex items-center gap-2 ${
+          darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+        }`}>
+          <Cpu className="h-3.5 w-3.5 text-cyan-400 animate-spin shrink-0" />
+          <div className="flex-1 overflow-hidden">
+            <StreamdownMarkdown content={latestTextThought.thought} />
+          </div>
         </div>
-      ))}
+      )}
 
+      {/* Log único de la herramienta activa (se reemplaza dinámicamente) */}
+      {latestToolThought && (
+        <Thought
+          thought={latestToolThought}
+          allToolIcons={allToolIcons || {}}
+          isFinished={!!latestToolThought.observation || !isResponding}
+        />
+      )}
+
+      {/* Imágenes adjuntas generadas */}
+      {assistantImages.length > 0 && (
+        <div className="mt-2">
+          <ImageGallery srcs={assistantImages.map(f => f.url)} />
+        </div>
+      )}
+
+      {/* Respuesta redactada */}
       {content && (
         <div className="mt-2">
           <StreamdownMarkdown content={content} />

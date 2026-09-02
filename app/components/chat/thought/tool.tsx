@@ -91,7 +91,7 @@ const Tool: FC<Props> = ({
           icon || <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
         )}
         <span className="text-slate-400 shrink-0">
-          {t(`tools.thought.${isFinished ? 'used' : 'using'}`)}
+          {isFinished ? 'Ejecutado' : 'Ejecutando'}
         </span>
         <span
           className="font-medium text-slate-200 truncate max-w-[280px] sm:max-w-none"
