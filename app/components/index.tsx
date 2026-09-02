@@ -344,18 +344,29 @@ const Main: FC<IMainProps> = () => {
   // --- Carga Inicial de Parámetros ---
   useEffect(() => {
     (async () => {
-      if (!hasSetAppConfig) {
+      const isValidConfig = APP_ID && API_KEY && APP_ID !== 'undefined' && API_KEY !== 'undefined'
+      if (!isValidConfig) {
         setAppUnavailable(true)
         return
       }
 
       try {
-        const [appParams, { data: conversations }]: any = await Promise.all([fetchAppParams(), fetchConversations()])
-        const { user_input_form, file_upload, system_parameters }: any = appParams
+        const [appParams, resConvs]: any = await Promise.all([
+          fetchAppParams().catch(() => ({})),
+          fetchConversations().catch(() => ({ data: [] })),
+        ])
+
+        const conversations: ConversationItem[] = Array.isArray(resConvs?.data)
+          ? resConvs.data
+          : Array.isArray(resConvs)
+            ? resConvs
+            : []
+
+        const { user_input_form, file_upload, system_parameters }: any = appParams || {}
         const _conversationId = getConversationIdFromStorage(APP_ID)
         const isNotNewConversation = conversations.some((c: any) => c.id === _conversationId)
 
-        const prompt_variables = userInputsFormToPromptVariables(user_input_form)
+        const prompt_variables = userInputsFormToPromptVariables(user_input_form || [])
         setPromptConfig({
           prompt_template: promptTemplate,
           prompt_variables,
@@ -376,7 +387,7 @@ const Main: FC<IMainProps> = () => {
           number_limits: file_upload?.number_limits,
           fileUploadConfig: file_upload?.fileUploadConfig,
         })
-        setConversationList(conversations as ConversationItem[])
+        setConversationList(conversations)
 
         if (isNotNewConversation) {
           setCurrConversationId(_conversationId, APP_ID, false)
