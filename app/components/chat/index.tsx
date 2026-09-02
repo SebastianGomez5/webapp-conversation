@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Paperclip,
   Globe,
@@ -137,8 +137,14 @@ const Chat: FC<IChatProps> = ({
     setCustomAttachedFiles([])
   }
 
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatList, isResponding])
+
   return (
-    <div className="flex flex-col h-full w-full relative">
+    <div className="flex flex-1 flex-col h-full min-h-0 w-full relative overflow-hidden">
       {/* Feed de Mensajes */}
       <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 space-y-6 scrollbar-thin">
         {chatList.map((item) => {
@@ -194,6 +200,7 @@ const Chat: FC<IChatProps> = ({
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Dock de Entrada Futurista (Centro de Mando) */}

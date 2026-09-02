@@ -238,7 +238,8 @@ const Main: FC<IMainProps> = () => {
   const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
   const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
 
-  const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
+  const rawName = currConversationInfo?.name || t('app.chat.newChatDefaultName', { defaultValue: 'Nueva Conversación' }) as string
+  const conversationName = rawName === 'app.chat.newChatDefaultName' ? 'Nueva Conversación' : rawName
   const conversationIntroduction = currConversationInfo?.introduction || ''
   const suggestedQuestions = currConversationInfo?.suggested_questions || []
 
