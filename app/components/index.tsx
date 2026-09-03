@@ -683,7 +683,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   return (
-    <div className={`flex h-screen w-full select-none overflow-hidden font-sans transition-colors duration-300 ${
+    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 ${
       darkMode ? 'bg-[#090D14] text-slate-100' : 'bg-[#F8FAFC] text-slate-800'
     }`}>
       {/* ========================================================= */}

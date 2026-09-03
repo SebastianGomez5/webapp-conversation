@@ -33,7 +33,7 @@ const Question: FC<IQuestionProps> = ({
       <div className="flex flex-col space-y-1 max-w-[88%] sm:max-w-[80%] items-end">
         {/* Burbuja Principal */}
         <div
-          className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+          className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed select-text ${
             darkMode
               ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm shadow-md'
               : 'bg-slate-900 text-white rounded-tr-sm shadow-md'
@@ -52,7 +52,7 @@ const Question: FC<IQuestionProps> = ({
               {docFiles.map((file, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-black/20 text-[10px] sm:text-[11px] font-mono text-emerald-100"
+                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-black/20 text-[10px] sm:text-[11px] font-mono text-emerald-100 select-text"
                 >
                   <FileText className="h-3 w-3 shrink-0" />
                   <span className="truncate max-w-[140px] sm:max-w-[180px]">{file.url || 'Documento adjunto'}</span>
@@ -61,7 +61,7 @@ const Question: FC<IQuestionProps> = ({
             </div>
           )}
 
-          <div className="whitespace-pre-wrap font-normal">{content}</div>
+          <div className="whitespace-pre-wrap font-normal select-text">{content}</div>
         </div>
 
         {/* Timestamp */}

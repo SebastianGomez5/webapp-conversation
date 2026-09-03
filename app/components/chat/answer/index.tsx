@@ -129,7 +129,7 @@ const Answer: FC<IAnswerProps> = ({
       <div className="flex flex-col space-y-1.5 max-w-[88%] sm:max-w-[80%] min-w-0">
         {/* Burbuja Principal */}
         <div
-          className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+          className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed select-text ${
             darkMode
               ? 'bg-slate-900/90 border border-slate-800 text-slate-100 rounded-tl-sm shadow-sm'
               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'
