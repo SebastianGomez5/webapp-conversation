@@ -44,8 +44,14 @@ const Main: FC<IMainProps> = () => {
 
   // --- Estados de Tema y UI Futurista ---
   const [darkMode, setDarkMode] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setSidebarOpen(true)
+    }
+  }, [])
 
   // --- Modales y Overlays ---
   const [showSettings, setShowSettings] = useState(false)
@@ -690,11 +696,20 @@ const Main: FC<IMainProps> = () => {
         onNewChat={() => handleConversationIdChange('-1')}
         darkMode={darkMode}
         sidebarOpen={sidebarOpen}
+        onCloseSidebarMobile={() => setSidebarOpen(false)}
         onOpenSettings={() => setShowSettings(true)}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         copyRight={APP_INFO.copyright || APP_INFO.title}
       />
+
+      {/* Overlay oscuro para móviles cuando el sidebar está abierto */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* ========================================================= */}
       {/* CANVAS PRINCIPAL DEL CHAT                                */}
@@ -702,48 +717,50 @@ const Main: FC<IMainProps> = () => {
       <main className="flex flex-1 flex-col h-full min-w-0 relative overflow-hidden">
         {/* Barra Superior del Canvas */}
         <header
-          className={`flex h-16 items-center justify-between px-6 border-b z-10 backdrop-blur-md transition-colors shrink-0 ${
+          className={`flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 border-b z-10 backdrop-blur-md transition-colors shrink-0 ${
             darkMode ? 'border-slate-800/80 bg-[#090D14]/80' : 'border-slate-200/80 bg-white/80'
           }`}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`p-2 rounded-lg border transition-colors ${
+              className={`p-1.5 sm:p-2 rounded-lg border transition-colors shrink-0 ${
                 darkMode ? 'border-slate-800 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
               }`}
+              title="Abrir/Cerrar menú"
             >
               <Sliders className="h-4 w-4" />
             </button>
 
             <div className="flex flex-col min-w-0">
-              <h2 className="text-sm font-semibold truncate flex items-center gap-2">
-                <span className="truncate">{conversationName}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <h2 className="text-xs sm:text-sm font-semibold truncate flex items-center gap-1.5 sm:gap-2">
+                <span className="truncate max-w-[130px] sm:max-w-xs md:max-w-md">{conversationName}</span>
+                <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
                   {selectedSkill.name.split(' ')[0]}
                 </span>
               </h2>
-              <span className="text-[11px] text-slate-400 truncate">
+              <span className="text-[10px] sm:text-[11px] text-slate-400 truncate hidden sm:inline">
                 MCP: FluentCRM • WooCommerce • n8n Activos
               </span>
             </div>
           </div>
 
           {/* Acciones Rápidas del Header */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Botón Modo Voz Directo */}
             <button
               onClick={() => setShowVoiceOrb(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/30 hover:border-amber-400/60 transition-all shadow-sm"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/30 hover:border-amber-400/60 transition-all shadow-sm"
             >
-              <Headphones className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Modo Voz Directo</span>
+              <Headphones className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden md:inline">Modo Voz Directo</span>
+              <span className="md:hidden">Voz</span>
             </button>
 
             {/* Selector de Tema Claro / Oscuro */}
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-lg border transition-colors ${
+              className={`p-1.5 sm:p-2 rounded-lg border transition-colors ${
                 darkMode
                   ? 'border-slate-800 hover:bg-slate-800 text-amber-400'
                   : 'border-slate-200 hover:bg-slate-100 text-slate-700'

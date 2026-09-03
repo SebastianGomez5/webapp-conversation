@@ -111,9 +111,9 @@ const Answer: FC<IAnswerProps> = ({
   )
 
   return (
-    <div key={id} className="flex gap-4 max-w-4xl mx-auto justify-start w-full">
+    <div key={id} className="flex gap-2 sm:gap-4 max-w-4xl mx-auto justify-start w-full">
       {/* Avatar del Asistente */}
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 text-amber-400 shadow-md overflow-hidden select-none">
+      <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 text-amber-400 shadow-md overflow-hidden select-none">
         <img
           src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg"
           alt="Carlos"
@@ -122,14 +122,14 @@ const Answer: FC<IAnswerProps> = ({
             (e.currentTarget as HTMLElement).style.display = 'none'
           }}
         />
-        <Bot className="h-5 w-5" />
+        <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
       </div>
 
       {/* Contenido del Mensaje */}
-      <div className="flex flex-col space-y-2 max-w-[85%] sm:max-w-[75%] min-w-0">
+      <div className="flex flex-col space-y-1.5 max-w-[88%] sm:max-w-[80%] min-w-0">
         {/* Burbuja Principal */}
         <div
-          className={`relative px-4 py-3.5 rounded-2xl text-sm leading-relaxed ${
+          className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
             darkMode
               ? 'bg-slate-900/90 border border-slate-800 text-slate-100 rounded-tl-sm shadow-sm'
               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'

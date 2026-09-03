@@ -42,13 +42,25 @@ const Sidebar: FC<ISidebarProps> = ({
     (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
+  const handleSelectChat = (id: string) => {
+    onCurrentIdChange(id)
+    onCloseSidebarMobile?.()
+  }
+
+  const handleCreateNewChat = () => {
+    onNewChat()
+    onCloseSidebarMobile?.()
+  }
+
   return (
     <aside
-      className={`relative flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 ${
-        sidebarOpen ? 'w-80' : 'w-0 -translate-x-full md:w-20 md:translate-x-0'
+      className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 ${
+        sidebarOpen
+          ? 'w-72 sm:w-80 translate-x-0 shadow-2xl md:shadow-none'
+          : '-translate-x-full md:translate-x-0 md:w-20 w-0'
       } ${
         darkMode
-          ? 'border-slate-800/70 bg-[#0E131F]/95 text-slate-100'
+          ? 'border-slate-800/70 bg-[#0E131F] text-slate-100'
           : 'border-slate-200/80 bg-white text-slate-800'
       }`}
     >
@@ -80,7 +92,8 @@ const Sidebar: FC<ISidebarProps> = ({
         {onCloseSidebarMobile && (
           <button
             onClick={onCloseSidebarMobile}
-            className="md:hidden p-1 rounded-lg text-slate-400 hover:text-slate-200"
+            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            title="Cerrar panel"
           >
             <X className="h-5 w-5" />
           </button>
@@ -90,15 +103,16 @@ const Sidebar: FC<ISidebarProps> = ({
       {/* Botón Nuevo Chat */}
       <div className="p-3 shrink-0">
         <button
-          onClick={onNewChat}
+          onClick={handleCreateNewChat}
           className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-sm font-medium transition-all shadow-sm ${
             darkMode
               ? 'bg-slate-800/90 hover:bg-slate-700 text-slate-100 border border-slate-700/50 hover:border-slate-600'
               : 'bg-slate-900 hover:bg-slate-800 text-white'
           }`}
+          title="Nueva conversación"
         >
-          <Plus className="h-4 w-4" />
-          {sidebarOpen && <span>Nueva conversación</span>}
+          <Plus className="h-4 w-4 shrink-0" />
+          {sidebarOpen && <span className="truncate">Nueva conversación</span>}
         </button>
       </div>
 
@@ -129,7 +143,7 @@ const Sidebar: FC<ISidebarProps> = ({
           return (
             <div
               key={chat.id}
-              onClick={() => onCurrentIdChange(chat.id)}
+              onClick={() => handleSelectChat(chat.id)}
               className={`group relative flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-xs transition-all ${
                 isActive
                   ? darkMode
@@ -172,23 +186,23 @@ const Sidebar: FC<ISidebarProps> = ({
           darkMode ? 'bg-slate-950/50' : 'bg-slate-50'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <div className="relative shrink-0">
             <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold border border-slate-700 text-slate-200">
               AD
             </div>
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>
           </div>
           {sidebarOpen && (
-            <div className="flex flex-col">
+            <div className="flex flex-col truncate">
               <span className="text-xs font-medium truncate">Álvaro Díaz</span>
-              <span className="text-[10px] text-slate-400">Admin Pro</span>
+              <span className="text-[10px] text-slate-400 truncate">Admin Pro</span>
             </div>
           )}
         </div>
 
         {sidebarOpen && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={onOpenSettings}
               className={`p-1.5 rounded-lg transition-colors ${
