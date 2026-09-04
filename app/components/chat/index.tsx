@@ -12,6 +12,7 @@ import {
   X,
   Square,
   Loader2,
+  UploadCloud,
 } from 'lucide-react'
 import type { FeedbackFunc } from './type'
 import Answer from './answer'
@@ -87,56 +88,104 @@ const Chat: FC<IChatProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [attachedFiles, setAttachedFiles] = useState<AttachedFileItem[]>([])
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounterRef = useRef(0)
+
+  const processFileList = (files: File[]) => {
+    if (files.length === 0) { return }
+    files.forEach((file) => {
+      const fileId = `${Date.now()}-${Math.random()}`
+      const isImg = file.type.startsWith('image/')
+      const newFileItem: AttachedFileItem = {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        type: isImg ? 'image' : 'document',
+        file,
+        uploading: true,
+      }
+
+      setAttachedFiles(prev => [...prev, newFileItem])
+
+      fileUpload({
+        file,
+        onProgressCallback: () => { },
+        onSuccessCallback: (res) => {
+          setAttachedFiles(prev => prev.map((item) => {
+            if (item.id === fileId) {
+              return {
+                ...item,
+                uploading: false,
+                upload_file_id: res.id,
+                url: isImg ? URL.createObjectURL(file) : file.name,
+              }
+            }
+            return item
+          }))
+        },
+        onErrorCallback: () => {
+          setAttachedFiles(prev => prev.map((item) => {
+            if (item.id === fileId) {
+              return {
+                ...item,
+                uploading: false,
+                error: true,
+              }
+            }
+            return item
+          }))
+        },
+      })
+    })
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFiles = Array.from(e.target.files || [])
-    if (rawFiles.length > 0) {
-      rawFiles.forEach((file) => {
-        const fileId = `${Date.now()}-${Math.random()}`
-        const isImg = file.type.startsWith('image/')
-        const newFileItem: AttachedFileItem = {
-          id: fileId,
-          name: file.name,
-          size: file.size,
-          type: isImg ? 'image' : 'document',
-          file,
-          uploading: true,
-        }
-
-        setAttachedFiles(prev => [...prev, newFileItem])
-
-        fileUpload({
-          file,
-          onProgressCallback: () => { },
-          onSuccessCallback: (res) => {
-            setAttachedFiles(prev => prev.map((item) => {
-              if (item.id === fileId) {
-                return {
-                  ...item,
-                  uploading: false,
-                  upload_file_id: res.id,
-                  url: isImg ? URL.createObjectURL(file) : file.name,
-                }
-              }
-              return item
-            }))
-          },
-          onErrorCallback: () => {
-            setAttachedFiles(prev => prev.map((item) => {
-              if (item.id === fileId) {
-                return {
-                  ...item,
-                  uploading: false,
-                  error: true,
-                }
-              }
-              return item
-            }))
-          },
-        })
-      })
-    }
+    processFileList(rawFiles)
     if (fileInputRef.current) { fileInputRef.current.value = '' }
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current += 1
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current -= 1
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounterRef.current = 0
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFileList(Array.from(e.dataTransfer.files))
+      e.dataTransfer.clearData()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const files = Array.from(e.clipboardData.files)
+      processFileList(files)
+    }
   }
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -170,7 +219,24 @@ const Chat: FC<IChatProps> = ({
   }, [chatList, isResponding])
 
   return (
-    <div className="flex flex-1 flex-col h-full min-h-0 w-full relative overflow-hidden">
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="flex flex-1 flex-col h-full min-h-0 w-full relative overflow-hidden"
+    >
+      {/* Overlay de Drag & Drop */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md border-2 border-dashed border-emerald-500 rounded-3xl m-2 sm:m-4 pointer-events-none transition-all shadow-2xl">
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-3 shadow-lg shadow-emerald-500/20">
+            <UploadCloud className="h-10 w-10 animate-bounce" />
+          </div>
+          <p className="text-sm sm:text-base font-semibold text-emerald-400">Suelta tus archivos para adjuntarlos</p>
+          <p className="text-xs text-slate-400 mt-1">Soporta documentos, imágenes, PDFs, hojas de cálculo y texto</p>
+        </div>
+      )}
+
       {/* Feed de Mensajes */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-12 py-3 sm:py-6 space-y-3 sm:space-y-6 scrollbar-thin">
         {chatList.map((item) => {
@@ -361,6 +427,7 @@ const Chat: FC<IChatProps> = ({
               ref={textareaRef}
               value={inputText}
               onChange={e => setInputText(e.target.value)}
+              onPaste={handlePaste}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
