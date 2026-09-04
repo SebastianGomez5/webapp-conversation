@@ -10,6 +10,7 @@ import {
   Bot,
   ThumbsUp,
   ThumbsDown,
+  RefreshCw,
 } from 'lucide-react'
 import copy from 'copy-to-clipboard'
 import type { FeedbackFunc } from '../type'
@@ -46,13 +47,6 @@ const Answer: FC<IAnswerProps> = ({
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
   const [copied, setCopied] = useState(false)
 
-  const handleCopy = () => {
-    if (!content) { return }
-    copy(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const getImgs = (list?: VisionFile[]) => {
     if (!list) { return [] }
     return list.filter(file => file.type === 'image' && file.belongs_to === 'assistant')
@@ -61,26 +55,38 @@ const Answer: FC<IAnswerProps> = ({
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
 
   // Mostrar un único log dinámico de la herramienta activa o la última ejecutada
-  const toolThoughts = (agent_thoughts || []).filter(item => !!item.tool)
+  const toolThoughts = (agent_thoughts || []).filter(item => Boolean(item.tool))
   const latestToolThought = toolThoughts[toolThoughts.length - 1]
 
   // Recolectar imágenes generadas por el asistente
   const assistantImages = (agent_thoughts || []).flatMap(item => getImgs(item.message_files))
 
-  // Último texto de pensamiento si está presente y aún no hay respuesta final
-  const thoughtsWithText = (agent_thoughts || []).filter(item => !!item.thought)
-  const latestTextThought = thoughtsWithText[thoughtsWithText.length - 1]
+  // Texto final de respuesta (del content o del thought final del LLM)
+  const nonToolThoughts = (agent_thoughts || []).filter(item => !item.tool && Boolean(item.thought))
+  const finalThoughtText = nonToolThoughts[nonToolThoughts.length - 1]?.thought || ''
+  const displayContent = content || finalThoughtText
+
+  // Razonamiento preliminar si existe antes de herramientas
+  const preliminaryThought = (agent_thoughts || [])[0]
+  const showPreliminaryThought = preliminaryThought && !preliminaryThought.tool && preliminaryThought.thought && !displayContent && isResponding
+
+  const handleCopy = () => {
+    if (!displayContent) { return }
+    copy(displayContent)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const agentModeAnswer = (
     <div className="space-y-2">
-      {/* Texto de razonamiento preliminar (si existe y no ha comenzado el content) */}
-      {latestTextThought?.thought && !content && (
+      {/* Texto de razonamiento preliminar (si existe antes de la respuesta) */}
+      {showPreliminaryThought && (
         <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border flex items-center gap-2 ${
           darkMode ? 'bg-slate-900/90 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
         }`}>
           <Cpu className="h-3.5 w-3.5 text-cyan-400 animate-spin shrink-0" />
           <div className="flex-1 overflow-hidden">
-            <StreamdownMarkdown content={latestTextThought.thought} />
+            <StreamdownMarkdown content={preliminaryThought.thought} />
           </div>
         </div>
       )}
@@ -90,7 +96,7 @@ const Answer: FC<IAnswerProps> = ({
         <Thought
           thought={latestToolThought}
           allToolIcons={allToolIcons || {}}
-          isFinished={!!latestToolThought.observation || !isResponding}
+          isFinished={Boolean(latestToolThought.observation) || !isResponding}
         />
       )}
 
@@ -101,10 +107,10 @@ const Answer: FC<IAnswerProps> = ({
         </div>
       )}
 
-      {/* Respuesta redactada */}
-      {content && (
+      {/* Respuesta redactada final */}
+      {displayContent && (
         <div className="mt-2">
-          <StreamdownMarkdown content={content} />
+          <StreamdownMarkdown content={displayContent} />
         </div>
       )}
     </div>
@@ -141,13 +147,20 @@ const Answer: FC<IAnswerProps> = ({
             </div>
           )}
 
-          {isAgentMode
+          {!displayContent && !latestToolThought && isResponding
             ? (
-              agentModeAnswer
+              <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono py-1">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
+                <span>Consultando MCP & ejecutando razonamiento...</span>
+              </div>
             )
-            : (
-              <StreamdownMarkdown content={content} />
-            )}
+            : isAgentMode
+              ? (
+                agentModeAnswer
+              )
+              : (
+                <StreamdownMarkdown content={displayContent} />
+              )}
 
           {/* Preguntas sugeridas */}
           {suggestedQuestions.length > 0 && (
@@ -178,10 +191,10 @@ const Answer: FC<IAnswerProps> = ({
           <span>•</span>
 
           {/* Botón de Voz (TTS) */}
-          {onSpeakToggle && content && (
+          {onSpeakToggle && displayContent && (
             <>
               <button
-                onClick={() => onSpeakToggle(content, id)}
+                onClick={() => onSpeakToggle(displayContent, id)}
                 className={`hover:text-amber-400 flex items-center gap-1 transition-colors ${
                   isSpeaking ? 'text-amber-400 font-semibold' : ''
                 }`}
@@ -195,7 +208,7 @@ const Answer: FC<IAnswerProps> = ({
           )}
 
           {/* Copiar texto */}
-          {content && (
+          {displayContent && (
             <>
               <button
                 onClick={handleCopy}

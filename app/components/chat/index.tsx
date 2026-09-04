@@ -10,7 +10,8 @@ import {
   ChevronDown,
   FileText,
   X,
-  RefreshCw,
+  Square,
+  Loader2,
 } from 'lucide-react'
 import type { FeedbackFunc } from './type'
 import Answer from './answer'
@@ -18,7 +19,19 @@ import Question from './question'
 import type { ChatItem, VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
-import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
+import { fileUpload } from '@/app/components/base/file-uploader-in-attachment/utils'
+
+export interface AttachedFileItem {
+  id: string
+  name: string
+  size: number
+  type: string
+  file?: File
+  url?: string
+  uploading?: boolean
+  upload_file_id?: string
+  error?: boolean
+}
 
 export interface IChatProps {
   chatList: ChatItem[]
@@ -26,6 +39,7 @@ export interface IChatProps {
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
   onSend?: (message: string, files: VisionFile[]) => void
+  onStop?: () => void
   isResponding?: boolean
   darkMode?: boolean
   selectedSkill: any
@@ -51,6 +65,7 @@ const Chat: FC<IChatProps> = ({
   onFeedback,
   checkCanSend,
   onSend = () => { },
+  onStop = () => { },
   isResponding,
   darkMode = true,
   selectedSkill,
@@ -71,36 +86,54 @@ const Chat: FC<IChatProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const {
-    files: attachedImageFiles,
-    onUpload: onUploadImage,
-    onRemove: onRemoveImage,
-    onClear: onClearImages,
-  } = useImageFiles()
-
-  const [customAttachedFiles, setCustomAttachedFiles] = useState<Array<{ name: string, type: string, url?: string }>>([])
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFileItem[]>([])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFiles = Array.from(e.target.files || [])
     if (rawFiles.length > 0) {
-      // Process image files via useImageFiles or custom
-      rawFiles.forEach((f) => {
-        if (f.type.includes('image')) {
-          onUploadImage({
-            id: `${Date.now()}-${Math.random()}`,
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            file: f,
-            progress: 0,
-          })
+      rawFiles.forEach((file) => {
+        const fileId = `${Date.now()}-${Math.random()}`
+        const isImg = file.type.startsWith('image/')
+        const newFileItem: AttachedFileItem = {
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          type: isImg ? 'image' : 'document',
+          file,
+          uploading: true,
         }
-        else {
-          setCustomAttachedFiles(prev => [
-            ...prev,
-            { name: f.name, type: 'doc', url: f.name },
-          ])
-        }
+
+        setAttachedFiles(prev => [...prev, newFileItem])
+
+        fileUpload({
+          file,
+          onProgressCallback: () => { },
+          onSuccessCallback: (res) => {
+            setAttachedFiles(prev => prev.map((item) => {
+              if (item.id === fileId) {
+                return {
+                  ...item,
+                  uploading: false,
+                  upload_file_id: res.id,
+                  url: isImg ? URL.createObjectURL(file) : file.name,
+                }
+              }
+              return item
+            }))
+          },
+          onErrorCallback: () => {
+            setAttachedFiles(prev => prev.map((item) => {
+              if (item.id === fileId) {
+                return {
+                  ...item,
+                  uploading: false,
+                  error: true,
+                }
+              }
+              return item
+            }))
+          },
+        })
       })
     }
     if (fileInputRef.current) { fileInputRef.current.value = '' }
@@ -111,30 +144,23 @@ const Chat: FC<IChatProps> = ({
     if (isResponding) { return }
 
     const trimmed = inputText.trim()
-    const allFilesCount = attachedImageFiles.length + customAttachedFiles.length
+    const validFiles = attachedFiles.filter(f => !f.error)
+    const isUploading = validFiles.some(f => f.uploading)
+    if (isUploading) { return }
 
-    if (!trimmed && allFilesCount === 0) { return }
-
+    if (!trimmed && validFiles.length === 0) { return }
     if (checkCanSend && !checkCanSend()) { return }
 
-    const visionFiles: VisionFile[] = [
-      ...attachedImageFiles.map(img => ({
-        type: 'image' as const,
-        transfer_method: img.file ? TransferMethod.local_file : TransferMethod.remote_url,
-        url: img.url || '',
-        upload_file_id: img.id,
-      })),
-      ...customAttachedFiles.map(doc => ({
-        type: doc.type as any,
-        transfer_method: TransferMethod.remote_url,
-        url: doc.url || doc.name,
-      })),
-    ]
+    const visionFiles: VisionFile[] = validFiles.map(f => ({
+      type: f.type as any,
+      transfer_method: f.upload_file_id ? TransferMethod.local_file : TransferMethod.remote_url,
+      url: f.url || f.name,
+      upload_file_id: f.upload_file_id || '',
+    }))
 
     onSend(trimmed, visionFiles)
     setInputText('')
-    onClearImages()
-    setCustomAttachedFiles([])
+    setAttachedFiles([])
   }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -149,14 +175,13 @@ const Chat: FC<IChatProps> = ({
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-12 py-3 sm:py-6 space-y-3 sm:space-y-6 scrollbar-thin">
         {chatList.map((item) => {
           if (item.isAnswer) {
-            const isLast = item.id === chatList[chatList.length - 1]?.id
             return (
               <Answer
                 key={item.id}
                 item={item}
                 feedbackDisabled={feedbackDisabled}
                 onFeedback={onFeedback}
-                isResponding={isResponding && isLast}
+                isResponding={isResponding}
                 darkMode={darkMode}
                 isSpeaking={isSpeakingMessageId === item.id}
                 onSpeakToggle={onSpeakToggle}
@@ -175,75 +200,11 @@ const Chat: FC<IChatProps> = ({
           )
         })}
 
-        {/* Animación de Pensamiento / Razonamiento */}
-        {isResponding && (
-          <div className="flex gap-3 sm:gap-4 max-w-4xl mx-auto justify-start w-full">
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-amber-400 overflow-hidden shadow-md">
-              <img
-                src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg"
-                alt="Carlos"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none'
-                }}
-              />
-            </div>
-            <div
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 rounded-2xl text-[11px] sm:text-xs font-mono ${
-                darkMode
-                  ? 'bg-slate-900/70 border border-slate-800 text-slate-400'
-                  : 'bg-white border border-slate-200 text-slate-500'
-              }`}
-            >
-              <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
-              <span>Consultando MCP & ejecutando razonamiento...</span>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Dock de Entrada Futurista (Centro de Mando) */}
       <div className="p-2 sm:p-4 md:px-12 md:pb-6 z-10 shrink-0">
-        {/* Barra de opciones si la habilidad es Generador de Documentos */}
-        {selectedSkill?.id === 'doc_gen' && (
-          <div className="max-w-4xl mx-auto mb-2 px-0.5">
-            <div
-              className={`p-2 sm:p-2.5 rounded-xl border backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 ${
-                darkMode
-                  ? 'bg-amber-950/20 border-amber-500/30 text-amber-200'
-                  : 'bg-amber-50 border-amber-200 text-amber-900'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold shrink-0">
-                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 shrink-0" />
-                <span>Tipo de documento:</span>
-              </div>
-              <div className="flex flex-nowrap sm:flex-wrap gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                {documentTemplates.map(doc => (
-                  <button
-                    key={doc.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDocTemplate(doc)
-                      setInputText(doc.prompt)
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-medium transition-all border whitespace-nowrap shrink-0 ${
-                      selectedDocTemplate?.id === doc.id
-                        ? 'bg-amber-500 text-slate-950 border-amber-400 font-semibold shadow-sm'
-                        : darkMode
-                          ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-200 border-slate-700/60'
-                          : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
-                    }`}
-                  >
-                    {doc.badge}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         <div
           className={`relative max-w-4xl mx-auto rounded-2xl border shadow-xl backdrop-blur-xl transition-all ${
             darkMode
@@ -252,41 +213,35 @@ const Chat: FC<IChatProps> = ({
           }`}
         >
           {/* Chips de Adjuntos Pendientes */}
-          {(attachedImageFiles.length > 0 || customAttachedFiles.length > 0) && (
+          {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-1.5 sm:gap-2 px-3 sm:px-4 pt-2.5">
-              {attachedImageFiles.map((file, index) => (
+              {attachedFiles.map(file => (
                 <div
-                  key={index}
+                  key={file.id}
                   className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono border ${
-                    darkMode
-                      ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                      : 'bg-slate-100 border-slate-300 text-slate-800'
+                    file.error
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      : darkMode
+                        ? 'bg-slate-800/80 border-slate-700 text-slate-200'
+                        : 'bg-slate-100 border-slate-300 text-slate-800'
                   }`}
                 >
-                  <FileText className="h-3 w-3 text-amber-400 shrink-0" />
+                  {file.uploading
+                    ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-amber-400 shrink-0" />
+                    )
+                    : file.type === 'url'
+                      ? (
+                        <Globe className="h-3 w-3 text-cyan-400 shrink-0" />
+                      )
+                      : (
+                        <FileText className="h-3 w-3 text-amber-400 shrink-0" />
+                      )}
                   <span className="max-w-[110px] sm:max-w-[150px] truncate">{file.name}</span>
                   <button
-                    onClick={() => onRemoveImage(file.id)}
-                    className="hover:text-rose-400 transition-colors shrink-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              {customAttachedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono border ${
-                    darkMode
-                      ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                      : 'bg-slate-100 border-slate-300 text-slate-800'
-                  }`}
-                >
-                  {file.type === 'url' ? <Globe className="h-3 w-3 text-cyan-400 shrink-0" /> : <FileText className="h-3 w-3 text-amber-400 shrink-0" />}
-                  <span className="max-w-[110px] sm:max-w-[150px] truncate">{file.name}</span>
-                  <button
-                    onClick={() => setCustomAttachedFiles(customAttachedFiles.filter((_, i) => i !== index))}
-                    className="hover:text-rose-400 transition-colors shrink-0"
+                    type="button"
+                    onClick={() => setAttachedFiles(attachedFiles.filter(i => i.id !== file.id))}
+                    className="hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -474,19 +429,33 @@ const Chat: FC<IChatProps> = ({
                 </button>
               </div>
 
-              {/* Botón Ejecutar */}
-              <button
-                type="submit"
-                disabled={(!inputText.trim() && attachedImageFiles.length === 0 && customAttachedFiles.length === 0) || isResponding}
-                className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all shadow-md ${
-                  (inputText.trim() || attachedImageFiles.length > 0 || customAttachedFiles.length > 0) && !isResponding
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/20 cursor-pointer'
-                    : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-700/30'
-                }`}
-              >
-                <span>Ejecutar</span>
-                <CornerDownLeft className="h-3 w-3" />
-              </button>
+              {/* Botón Ejecutar / Detener */}
+              {isResponding
+                ? (
+                  <button
+                    type="button"
+                    onClick={onStop}
+                    className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 shadow-sm active:scale-95 cursor-pointer"
+                    title="Detener respuesta"
+                  >
+                    <Square className="h-3 w-3 fill-rose-400 text-rose-400" />
+                    <span>Detener</span>
+                  </button>
+                )
+                : (
+                  <button
+                    type="submit"
+                    disabled={(!inputText.trim() && attachedFiles.length === 0) || attachedFiles.some(f => f.uploading)}
+                    className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all shadow-md ${
+                      (inputText.trim() || attachedFiles.length > 0) && !attachedFiles.some(f => f.uploading)
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/20 cursor-pointer'
+                        : 'bg-slate-800/40 text-slate-500 cursor-not-allowed border border-slate-700/30'
+                    }`}
+                  >
+                    <span>Ejecutar</span>
+                    <CornerDownLeft className="h-3 w-3" />
+                  </button>
+                )}
             </div>
           </form>
         </div>

@@ -418,7 +418,15 @@ const Main: FC<IMainProps> = () => {
 
   // --- Envío de Mensajes y Streaming SSE ---
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
-  const [, setAbortController] = useState<AbortController | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
+
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort()
+      setAbortController(null)
+    }
+    setRespondingFalse()
+  }
 
   const updateCurrentQA = ({
     responseItem,
@@ -457,8 +465,9 @@ const Main: FC<IMainProps> = () => {
       data.files = files.map((item) => {
         if (item.transfer_method === TransferMethod.local_file) {
           return {
-            ...item,
-            url: '',
+            type: item.type || 'document',
+            transfer_method: TransferMethod.local_file,
+            upload_file_id: item.upload_file_id,
           }
         }
         return item
@@ -470,7 +479,7 @@ const Main: FC<IMainProps> = () => {
       id: questionId,
       content: message,
       isAnswer: false,
-      message_files: (files || []).filter((f: any) => f.type === 'image' || !f.type),
+      message_files: files || [],
     }
 
     const placeholderAnswerId = `answer-placeholder-${Date.now()}`
@@ -502,12 +511,12 @@ const Main: FC<IMainProps> = () => {
         setAbortController(ac)
       },
       onData: (msgChunk: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId }: any) => {
-        if (!isAgentMode) {
-          responseItem.content = responseItem.content + msgChunk
-        }
-        else {
+        responseItem.content = responseItem.content + msgChunk
+        if (isAgentMode) {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
-          if (lastThought) { lastThought.thought = lastThought.thought + msgChunk }
+          if (lastThought && !lastThought.tool) {
+            lastThought.thought = (lastThought.thought || '') + msgChunk
+          }
         }
 
         if (messageId && !hasSetResponseId) {
@@ -776,6 +785,7 @@ const Main: FC<IMainProps> = () => {
         <Chat
           chatList={chatList}
           onSend={handleSend}
+          onStop={handleStop}
           onFeedback={handleFeedback}
           isResponding={isResponding}
           darkMode={darkMode}

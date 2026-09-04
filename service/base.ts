@@ -356,7 +356,9 @@ export const upload = (fetchOptions: any): Promise<any> => {
 export const ssePost = (
   url: string,
   fetchOptions: any,
-  {
+  otherOptions: IOtherOptions = {},
+) => {
+  const {
     onData,
     onCompleted,
     onThought,
@@ -368,10 +370,17 @@ export const ssePost = (
     onNodeStarted,
     onNodeFinished,
     onError,
-  }: IOtherOptions,
-) => {
+    getAbortController,
+  } = otherOptions
+
+  const controller = new AbortController()
+  if (getAbortController) {
+    getAbortController(controller)
+  }
+
   const options = Object.assign({}, baseOptions, {
     method: 'POST',
+    signal: controller.signal,
   }, fetchOptions)
 
   const urlPrefix = API_PREFIX
@@ -403,6 +412,9 @@ export const ssePost = (
       }, onThought, onMessageEnd, onMessageReplace, onFile, onWorkflowStarted, onWorkflowFinished, onNodeStarted, onNodeFinished)
     })
     .catch((e) => {
+      if (e?.name === 'AbortError' || controller.signal.aborted) {
+        return
+      }
       Toast.notify({ type: 'error', message: e })
       onError?.(e)
     })
