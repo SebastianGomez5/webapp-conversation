@@ -705,6 +705,7 @@ const Main: FC<IMainProps> = () => {
         onNewChat={() => handleConversationIdChange('-1')}
         darkMode={darkMode}
         sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         onCloseSidebarMobile={() => setSidebarOpen(false)}
         onOpenSettings={() => setShowSettings(true)}
         searchQuery={searchQuery}
@@ -759,7 +760,11 @@ const Main: FC<IMainProps> = () => {
             {/* Botón Modo Voz Directo */}
             <button
               onClick={() => setShowVoiceOrb(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/30 hover:border-amber-400/60 transition-all shadow-sm"
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition-all shadow-sm ${
+                darkMode
+                  ? 'bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/30 hover:border-amber-400/60'
+                  : 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 border border-amber-400 shadow-amber-500/20 hover:shadow-md'
+              }`}
             >
               <Headphones className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden md:inline">Modo Voz Directo</span>
