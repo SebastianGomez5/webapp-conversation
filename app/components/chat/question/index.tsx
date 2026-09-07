@@ -3,6 +3,7 @@ import type { FC } from 'react'
 import React from 'react'
 import { FileText } from 'lucide-react'
 import ImageGallery from '@/app/components/base/image-gallery'
+import { ACCENT_COLOR_MAP } from '@/app/components/settings/customization-modal'
 import type { VisionFile } from '@/types/app'
 
 interface IQuestionProps {
@@ -12,6 +13,9 @@ interface IQuestionProps {
   imgSrcs?: string[]
   message_files?: VisionFile[]
   darkMode?: boolean
+  userAvatar?: string
+  userName?: string
+  accentColor?: string
 }
 
 const Question: FC<IQuestionProps> = ({
@@ -21,12 +25,24 @@ const Question: FC<IQuestionProps> = ({
   imgSrcs = [],
   message_files = [],
   darkMode = true,
+  userAvatar,
+  userName,
+  accentColor = 'emerald',
 }) => {
   const images = (imgSrcs.length > 0
     ? imgSrcs
     : message_files.filter(f => f.type === 'image' || !f.type).map(f => f.url).filter(Boolean)) as string[]
 
   const docFiles = message_files.filter(f => f.type !== 'image' && f.type)
+
+  const accent = ACCENT_COLOR_MAP[(accentColor as keyof typeof ACCENT_COLOR_MAP) || 'emerald'] || ACCENT_COLOR_MAP.emerald
+
+  const userInitials = (userName || 'AD')
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase()
 
   return (
     <div key={id} className="flex gap-2 sm:gap-4 max-w-4xl mx-auto justify-end w-full">
@@ -35,7 +51,7 @@ const Question: FC<IQuestionProps> = ({
         <div
           className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed select-text ${
             darkMode
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm shadow-md'
+              ? `bg-gradient-to-r ${accent.bubbleUser} text-white rounded-tr-sm shadow-md`
               : 'bg-slate-900 text-white rounded-tr-sm shadow-md'
           }`}
         >
@@ -71,8 +87,14 @@ const Question: FC<IQuestionProps> = ({
       </div>
 
       {/* Avatar del Usuario */}
-      <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[10px] sm:text-xs font-bold shadow-md select-none">
-        AD
+      <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[10px] sm:text-xs font-bold shadow-md select-none overflow-hidden">
+        {userAvatar
+          ? (
+            <img src={userAvatar} alt={userName || 'Usuario'} className="w-full h-full object-cover" />
+          )
+          : (
+            <span>{userInitials}</span>
+          )}
       </div>
     </div>
   )

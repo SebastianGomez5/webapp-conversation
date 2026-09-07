@@ -31,6 +31,8 @@ interface IAnswerProps {
   darkMode?: boolean
   isSpeaking?: boolean
   onSpeakToggle?: (text: string, messageId: string) => void
+  botAvatar?: string
+  botName?: string
 }
 
 const Answer: FC<IAnswerProps> = ({
@@ -43,6 +45,8 @@ const Answer: FC<IAnswerProps> = ({
   darkMode = true,
   isSpeaking = false,
   onSpeakToggle,
+  botAvatar,
+  botName,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
   const [copied, setCopied] = useState(false)
@@ -121,8 +125,8 @@ const Answer: FC<IAnswerProps> = ({
       {/* Avatar del Asistente */}
       <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 text-amber-400 shadow-md overflow-hidden select-none">
         <img
-          src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg"
-          alt="Carlos"
+          src={botAvatar || 'https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg'}
+          alt={botName || 'Carlos'}
           className="w-full h-full object-cover"
           onError={(e) => {
             (e.currentTarget as HTMLElement).style.display = 'none'

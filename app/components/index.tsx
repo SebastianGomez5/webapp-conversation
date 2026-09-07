@@ -5,13 +5,11 @@ import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
 import {
-  Sliders,
   Sun,
   Moon,
   Headphones,
   Radio,
   Globe,
-  Settings,
   X,
   FileText,
   Database,
@@ -32,6 +30,8 @@ import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/confi
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
+import { CustomizationModal, DEFAULT_CUSTOMIZATION } from '@/app/components/settings/customization-modal'
+import type { UserCustomization } from '@/app/components/settings/customization-modal'
 
 export interface IMainProps {
   params: any
@@ -47,6 +47,36 @@ const Main: FC<IMainProps> = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // --- Personalización del Usuario & Aspecto Visual ---
+  const [customization, setCustomization] = useState<UserCustomization>(DEFAULT_CUSTOMIZATION)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('amyet_user_customization')
+        if (saved) {
+          setCustomization({ ...DEFAULT_CUSTOMIZATION, ...JSON.parse(saved) })
+        }
+      }
+      catch (e) {
+        // ignore
+      }
+    }
+  }, [])
+
+  const handleSaveCustomization = (newCustomization: UserCustomization) => {
+    setCustomization(newCustomization)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('amyet_user_customization', JSON.stringify(newCustomization))
+        notify({ type: 'success', message: '¡Ajustes y personalización guardados!' })
+      }
+      catch (e) {
+        // ignore
+      }
+    }
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
       setSidebarOpen(true)
@@ -58,17 +88,6 @@ const Main: FC<IMainProps> = () => {
   const [showVoiceOrb, setShowVoiceOrb] = useState(false)
   const [showUrlModal, setShowUrlModal] = useState(false)
   const [urlInput, setUrlInput] = useState('')
-
-  // --- Configuración de Infraestructura ---
-  const [config, setConfig] = useState({
-    difyEndpoint: 'https://api.dify.ai/v1',
-    difyApiKey: 'app-xxxx-xxxx-xxxx',
-    activeModel: 'DeepSeek R1 + Gemini 2.5 Flash',
-    mcpFluentCRM: true,
-    mcpWooCommerce: true,
-    mcpN8N: true,
-    speechRate: 1.0,
-  })
 
   // --- Opciones de Plantillas para Generador de Documentos ---
   const documentTemplates = [
@@ -192,7 +211,7 @@ const Main: FC<IMainProps> = () => {
     const cleanText = text.replace(/[#*`_]/g, '')
     const utterance = new SpeechSynthesisUtterance(cleanText)
     utterance.lang = 'es-ES'
-    utterance.rate = config.speechRate
+    utterance.rate = customization.speechRate || 1
 
     utterance.onend = () => setIsSpeakingMessageId(null)
     utterance.onerror = () => setIsSpeakingMessageId(null)
@@ -711,6 +730,7 @@ const Main: FC<IMainProps> = () => {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         copyRight={APP_INFO.copyright || APP_INFO.title}
+        customization={customization}
       />
 
       {/* Overlay oscuro para móviles cuando el sidebar está abierto */}
@@ -731,27 +751,21 @@ const Main: FC<IMainProps> = () => {
             darkMode ? 'border-slate-800/80 bg-[#090D14]/80' : 'border-slate-200/80 bg-white/80'
           }`}
         >
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`p-1.5 sm:p-2 rounded-lg border transition-colors shrink-0 ${
-                darkMode ? 'border-slate-800 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
-              }`}
-              title="Abrir/Cerrar menú"
-            >
-              <Sliders className="h-4 w-4" />
-            </button>
-
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="flex flex-col min-w-0">
-              <h2 className="text-xs sm:text-sm font-semibold truncate flex items-center gap-1.5 sm:gap-2">
-                <span className="truncate max-w-[130px] sm:max-w-xs md:max-w-md">{conversationName}</span>
-                <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                  {selectedSkill.name.split(' ')[0]}
-                </span>
+              <h2 className="text-xs sm:text-sm font-semibold truncate">
+                {conversationName}
               </h2>
-              <span className="text-[10px] sm:text-[11px] text-slate-400 truncate hidden sm:inline">
-                MCP: FluentCRM • WooCommerce • n8n Activos
-              </span>
+            </div>
+
+            {/* Badge Estado Studio */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono shrink-0 select-none border ${
+              darkMode
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></span>
+              <span className="font-semibold">Studio</span>
             </div>
           </div>
 
@@ -809,6 +823,7 @@ const Main: FC<IMainProps> = () => {
           fileConfig={fileConfig}
           inputText={inputText}
           setInputText={setInputText}
+          customization={customization}
         />
       </main>
 
@@ -904,119 +919,16 @@ const Main: FC<IMainProps> = () => {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: CONFIGURACIÓN DE INFRAESTRUCTURA                   */}
+      {/* MODAL: PERSONALIZACIÓN & AJUSTES DEL SISTEMA              */}
       {/* ========================================================= */}
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className={`relative w-full max-w-xl rounded-3xl p-6 border shadow-2xl max-h-[90vh] overflow-y-auto ${
-            darkMode ? 'bg-[#0C101C] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <div className="flex items-center justify-between pb-4 border-b border-inherit">
-              <div className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-amber-400" />
-                <h3 className="text-base font-bold">Configuración de Infraestructura</h3>
-              </div>
-              <button onClick={() => setShowSettings(false)} className="p-1 rounded-lg hover:bg-slate-800 text-slate-400">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-5 mt-5 text-xs">
-              {/* Endpoint Dify */}
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Dify Service API Endpoint (VPS Hostinger)</label>
-                <input
-                  type="text"
-                  value={config.difyEndpoint}
-                  onChange={e => setConfig({ ...config, difyEndpoint: e.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border outline-none font-mono ${
-                    darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
-              </div>
-
-              {/* API Key */}
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Dify App Secret Token</label>
-                <input
-                  type="password"
-                  value={config.difyApiKey}
-                  onChange={e => setConfig({ ...config, difyApiKey: e.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border outline-none font-mono ${
-                    darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
-              </div>
-
-              {/* Conectores MCP Activos */}
-              <div className="space-y-2">
-                <label className="font-semibold text-slate-300">Conectores MCP Habilitados</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer ${
-                    darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={config.mcpFluentCRM}
-                      onChange={e => setConfig({ ...config, mcpFluentCRM: e.target.checked })}
-                      className="rounded accent-emerald-500"
-                    />
-                    <span>Fluent CRM Hub</span>
-                  </label>
-                  <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer ${
-                    darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={config.mcpWooCommerce}
-                      onChange={e => setConfig({ ...config, mcpWooCommerce: e.target.checked })}
-                      className="rounded accent-emerald-500"
-                    />
-                    <span>WooCommerce Store</span>
-                  </label>
-                  <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer ${
-                    darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={config.mcpN8N}
-                      onChange={e => setConfig({ ...config, mcpN8N: e.target.checked })}
-                      className="rounded accent-emerald-500"
-                    />
-                    <span>n8n Webhook Triggers</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Velocidad TTS */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <label className="font-semibold text-slate-300">Velocidad de Respuesta de Voz (TTS)</label>
-                  <span className="font-mono text-emerald-400">{config.speechRate}x</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.8"
-                  max="1.5"
-                  step="0.1"
-                  value={config.speechRate}
-                  onChange={e => setConfig({ ...config, speechRate: parseFloat(e.target.value) })}
-                  className="w-full accent-emerald-500 cursor-pointer"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-inherit">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors"
-              >
-                Guardar Configuración
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CustomizationModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        customization={customization}
+        onSave={handleSaveCustomization}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
     </div>
   )
 }

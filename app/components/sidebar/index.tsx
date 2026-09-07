@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import type { ConversationItem } from '@/types/app'
+import type { UserCustomization } from '@/app/components/settings/customization-modal'
 
 export interface ISidebarProps {
   list: ConversationItem[]
@@ -24,6 +25,7 @@ export interface ISidebarProps {
   searchQuery: string
   onSearchQueryChange: (query: string) => void
   copyRight?: string
+  customization?: UserCustomization
 }
 
 const Sidebar: FC<ISidebarProps> = ({
@@ -39,6 +41,7 @@ const Sidebar: FC<ISidebarProps> = ({
   onOpenSettings,
   searchQuery,
   onSearchQueryChange,
+  customization,
 }) => {
   const filteredList = list.filter(item =>
     (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
@@ -53,6 +56,13 @@ const Sidebar: FC<ISidebarProps> = ({
     onNewChat()
     onCloseSidebarMobile?.()
   }
+
+  const userInitials = (customization?.userName || 'AD')
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase()
 
   return (
     <aside
@@ -204,31 +214,50 @@ const Sidebar: FC<ISidebarProps> = ({
           darkMode ? 'bg-slate-950/50' : 'bg-slate-50'
         }`}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          className="flex items-center gap-2 overflow-hidden text-left cursor-pointer group flex-1"
+          title="Personalizar perfil y aspecto visual"
+        >
           <div className="relative shrink-0">
-            <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold border border-slate-700 text-slate-200">
-              AD
-            </div>
+            {customization?.userAvatar
+              ? (
+                <img
+                  src={customization.userAvatar}
+                  alt={customization.userName || 'Usuario'}
+                  className="h-8 w-8 rounded-full object-cover border border-slate-700 shadow-sm"
+                />
+              )
+              : (
+                <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold border border-slate-700 text-slate-200">
+                  {userInitials}
+                </div>
+              )}
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>
           </div>
           {sidebarOpen && (
             <div className="flex flex-col truncate">
-              <span className="text-xs font-medium truncate">Álvaro Díaz</span>
-              <span className="text-[10px] text-slate-400 truncate">Admin Pro</span>
+              <span className="text-xs font-medium truncate group-hover:text-emerald-400 transition-colors">
+                {customization?.userName || 'Álvaro Díaz'}
+              </span>
+              <span className="text-[10px] text-slate-400 truncate">
+                {customization?.userRole || 'Admin Pro'}
+              </span>
             </div>
           )}
-        </div>
+        </button>
 
         {sidebarOpen && (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 ml-1">
             <button
               onClick={onOpenSettings}
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 darkMode
                   ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
                   : 'hover:bg-slate-200 text-slate-600'
               }`}
-              title="Configuración de Infraestructura"
+              title="Personalización y Configuración"
             >
               <Settings className="h-4 w-4" />
             </button>
