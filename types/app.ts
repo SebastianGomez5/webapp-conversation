@@ -88,6 +88,11 @@ export interface IChatItem {
   log?: { role: string, text: string }[]
   agent_thoughts?: ThoughtItem[]
   message_files?: VisionFile[]
+  botId?: string
+  botName?: string
+  botAvatar?: string
+  botRole?: string
+  botBadgeColor?: string
 }
 
 export type ChatItem = IChatItem & {

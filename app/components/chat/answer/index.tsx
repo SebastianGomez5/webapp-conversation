@@ -33,6 +33,7 @@ interface IAnswerProps {
   onSpeakToggle?: (text: string, messageId: string) => void
   botAvatar?: string
   botName?: string
+  botRole?: string
 }
 
 const Answer: FC<IAnswerProps> = ({
@@ -47,6 +48,7 @@ const Answer: FC<IAnswerProps> = ({
   onSpeakToggle,
   botAvatar,
   botName,
+  botRole,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
   const [copied, setCopied] = useState(false)
@@ -123,7 +125,7 @@ const Answer: FC<IAnswerProps> = ({
   return (
     <div key={id} className="flex gap-2 sm:gap-4 max-w-4xl mx-auto justify-start w-full">
       {/* Avatar del Asistente */}
-      <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 text-amber-400 shadow-md overflow-hidden select-none">
+      <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 text-amber-400 shadow-md overflow-hidden select-none mt-1">
         <img
           src={botAvatar || 'https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg'}
           alt={botName || 'Carlos'}
@@ -136,7 +138,21 @@ const Answer: FC<IAnswerProps> = ({
       </div>
 
       {/* Contenido del Mensaje */}
-      <div className="flex flex-col space-y-1.5 max-w-[88%] sm:max-w-[80%] min-w-0">
+      <div className="flex flex-col space-y-1 max-w-[88%] sm:max-w-[80%] min-w-0">
+        {/* Identidad del Bot */}
+        <div className="flex items-center gap-1.5 px-1 select-none">
+          <span className="text-[11px] sm:text-xs font-semibold tracking-tight text-slate-300">
+            {botName || 'CARLOS'}
+          </span>
+          {botRole && (
+            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono border ${
+              darkMode ? 'bg-slate-800/80 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
+              {botRole}
+            </span>
+          )}
+        </div>
+
         {/* Burbuja Principal */}
         <div
           className={`relative px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed select-text ${

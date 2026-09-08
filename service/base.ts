@@ -246,8 +246,33 @@ const handleStream = (
   read()
 }
 
+export const getActiveBotHeaders = (): Record<string, string> => {
+  if (typeof window === 'undefined') { return {} }
+  try {
+    const botId = localStorage.getItem('amyet_active_bot_id') || 'carlos'
+    const customKey = localStorage.getItem(`amyet_custom_key_${botId}`) || ''
+    const headers: Record<string, string> = {
+      'x-bot-id': botId,
+    }
+    if (customKey) {
+      headers['x-bot-api-key'] = customKey
+    }
+    return headers
+  }
+  catch (e) {
+    return {}
+  }
+}
+
 const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: IOtherOptions) => {
   const options = Object.assign({}, baseOptions, fetchOptions)
+
+  const botHeaders = getActiveBotHeaders()
+  const mergedHeaders = new Headers(options.headers || {})
+  Object.entries(botHeaders).forEach(([k, v]) => {
+    mergedHeaders.set(k, v)
+  })
+  options.headers = mergedHeaders
 
   const urlPrefix = API_PREFIX
 
@@ -327,14 +352,22 @@ const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: I
 export const upload = (fetchOptions: any): Promise<any> => {
   const urlPrefix = API_PREFIX
   const urlWithPrefix = `${urlPrefix}/file-upload`
+  const botHeaders = getActiveBotHeaders()
   const defaultOptions = {
     method: 'POST',
     url: `${urlWithPrefix}`,
     data: {},
+    headers: {
+      ...botHeaders,
+    },
   }
   const options = {
     ...defaultOptions,
     ...fetchOptions,
+    headers: {
+      ...defaultOptions.headers,
+      ...(fetchOptions?.headers || {}),
+    },
   }
   return new Promise((resolve, reject) => {
     const xhr = options.xhr
@@ -382,6 +415,13 @@ export const ssePost = (
     method: 'POST',
     signal: controller.signal,
   }, fetchOptions)
+
+  const botHeaders = getActiveBotHeaders()
+  const mergedHeaders = new Headers(options.headers || {})
+  Object.entries(botHeaders).forEach(([k, v]) => {
+    mergedHeaders.set(k, v)
+  })
+  options.headers = mergedHeaders
 
   const urlPrefix = API_PREFIX
   const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`

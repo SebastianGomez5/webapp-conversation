@@ -11,10 +11,6 @@ import {
   Radio,
   Globe,
   X,
-  FileText,
-  Database,
-  Layers,
-  Sparkles,
 } from 'lucide-react'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
@@ -32,6 +28,8 @@ import { addFileInfos, sortAgentSorts } from '@/utils/tools'
 import { replaceVarWithValues, userInputsFormToPromptVariables } from '@/utils/prompt'
 import { CustomizationModal, DEFAULT_CUSTOMIZATION } from '@/app/components/settings/customization-modal'
 import type { UserCustomization } from '@/app/components/settings/customization-modal'
+import { AGENTS_LIST, getAgentById } from '@/config/agents'
+import type { AgentConfig } from '@/config/agents'
 
 export interface IMainProps {
   params: any
@@ -89,65 +87,54 @@ const Main: FC<IMainProps> = () => {
   const [showUrlModal, setShowUrlModal] = useState(false)
   const [urlInput, setUrlInput] = useState('')
 
-  // --- Opciones de Plantillas para Generador de Documentos ---
-  const documentTemplates = [
-    {
-      id: 'propuesta',
-      title: 'Propuesta de Estructura de Negocio',
-      badge: 'Comercial / Venta',
-      desc: 'Alcance, entregables, arquitectura técnica y cotización formal.',
-      prompt: 'Genera una Propuesta de Estructura de Negocio Digital completa para el cliente. Incluye: diagnóstico inicial, arquitectura tecnológica recomendada, módulos a implementar, fases de entrega y propuesta económica desglosada.',
-    },
-    {
-      id: 'auditoria',
-      title: 'Auditoría & Diagnóstico Operativo',
-      badge: 'Análisis de Procesos',
-      desc: 'Revisión de embudos, carritos WooCommerce y salud de FluentCRM.',
-      prompt: 'Elabora una Auditoría y Diagnóstico Operativo detallado. Analiza los cuellos de botella actuales en embudos de venta, estado de la base de datos en CRM, retención de clientes y recomendaciones de optimización.',
-    },
-    {
-      id: 'informe',
-      title: 'Informe Ejecutivo & Roadmap',
-      badge: 'Estrategia / KPIs',
-      desc: 'Plan de acción estratégico, cronograma semanal y metas de facturación.',
-      prompt: 'Crea un Informe Ejecutivo y Roadmap de implementación estratégica. Estructura el plan en sprints semanales, definiendo responsables, metas de facturación esperadas y KPIs de seguimiento para el negocio.',
-    },
-  ]
+  // --- Agentes Dify (Multi-Agent Switcher) ---
+  const [activeAgent, setActiveAgent] = useState<AgentConfig>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedBotId = localStorage.getItem('amyet_active_bot_id')
+        return getAgentById(savedBotId || 'carlos')
+      }
+      catch (e) {
+        return AGENTS_LIST[0]
+      }
+    }
+    return AGENTS_LIST[0]
+  })
 
-  // --- Habilidades de Chat / Enfoques de Trabajo ---
-  const skills = [
-    {
-      id: 'doc_gen',
-      name: 'Generador de Documentos',
-      desc: 'Entregables, propuestas comerciales, auditorías e informes de negocio',
-      icon: FileText,
-      color: 'text-amber-400',
-      isDocumentGenerator: true,
-    },
-    {
-      id: 'crm_audit',
-      name: 'Auditoría & CRM Fluent Hub',
-      desc: 'Consulta de perfiles, compras WooCommerce y reservas',
-      icon: Database,
-      color: 'text-emerald-400',
-    },
-    {
-      id: 'n8n_agent',
-      name: 'Automatización & Procesos n8n',
-      desc: 'Disparo de webhooks, sincronización y flujos operativos',
-      icon: Layers,
-      color: 'text-cyan-400',
-    },
-    {
-      id: 'strategy',
-      name: 'Estratega de Negocio Digital',
-      desc: 'Diseño de modelos de monetización, embudos y escalabilidad',
-      icon: Sparkles,
-      color: 'text-indigo-400',
-    },
-  ]
-  const [selectedSkill, setSelectedSkill] = useState(skills[0])
-  const [selectedDocTemplate, setSelectedDocTemplate] = useState<any>(null)
+  const [botConversationMap, setBotConversationMap] = useState<Record<string, string>>({})
+
+  const handleSelectAgent = (agent: AgentConfig) => {
+    if (agent.id === activeAgent.id) { return }
+    setActiveAgent(agent)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('amyet_active_bot_id', agent.id)
+      }
+      catch (e) {
+        // ignore
+      }
+    }
+    // Seamlessly append transfer notice to existing chat without wiping the conversation history!
+    const transferNotice: ChatItem = {
+      id: `agent-switch-${Date.now()}`,
+      content: `✨ **Has conectado con ${agent.name}** (${agent.role})\n\n${agent.welcomeMessage}`,
+      isAnswer: true,
+      feedbackDisabled: true,
+      isOpeningStatement: false,
+      botId: agent.id,
+      botName: agent.name,
+      botAvatar: agent.avatar,
+      botRole: agent.role,
+      suggestedQuestions: agent.suggestedQuestions,
+    }
+    setChatList(produce(getChatList(), (draft) => {
+      draft.push(transferNotice)
+    }))
+    notify({
+      type: 'success',
+      message: `Cambiado a ${agent.name} (${agent.role})`,
+    })
+  }
 
   // --- Estados de Voz y Entrada ---
   const [inputText, setInputText] = useState('')
@@ -271,19 +258,27 @@ const Main: FC<IMainProps> = () => {
   const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
 
   const generateNewChatListWithOpenStatement = (introduction?: string, inputs?: Record<string, any> | null) => {
-    let calculatedIntroduction = introduction || conversationIntroduction || ''
+    let calculatedIntroduction = introduction || conversationIntroduction || activeAgent?.welcomeMessage || ''
     const calculatedPromptVariables = inputs || currInputs || null
     if (calculatedIntroduction && calculatedPromptVariables) {
       calculatedIntroduction = replaceVarWithValues(calculatedIntroduction, promptConfig?.prompt_variables || [], calculatedPromptVariables)
     }
 
+    const questions = suggestedQuestions && suggestedQuestions.length > 0
+      ? suggestedQuestions
+      : activeAgent?.suggestedQuestions || []
+
     const openStatement = {
       id: `${Date.now()}`,
-      content: calculatedIntroduction || '👋 ¡Hola Álvaro! ¿En qué estructura de negocio, automatización o consulta de clientes trabajamos hoy?',
+      content: calculatedIntroduction || activeAgent?.welcomeMessage || '👋 ¡Hola Álvaro! ¿En qué optimización de procesos o gestión trabajamos hoy?',
       isAnswer: true,
       feedbackDisabled: true,
       isOpeningStatement: isShowPrompt,
-      suggestedQuestions,
+      suggestedQuestions: questions,
+      botId: activeAgent?.id,
+      botName: activeAgent?.name,
+      botAvatar: activeAgent?.avatar,
+      botRole: activeAgent?.role,
     }
     return [openStatement]
   }
@@ -357,6 +352,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   const handleConversationIdChange = (id: string) => {
+    setBotConversationMap({})
     if (id === '-1') {
       createNewChat()
       setConversationIdChangeBecauseOfNew(true)
@@ -474,10 +470,13 @@ const Main: FC<IMainProps> = () => {
       return
     }
 
+    const targetBotId = activeAgent?.id || 'carlos'
+    const targetBotConvId = botConversationMap[targetBotId] || null
+
     const data: Record<string, any> = {
       inputs: currInputs || {},
       query: message,
-      conversation_id: isNewConversation ? null : currConversationId,
+      conversation_id: isNewConversation ? null : targetBotConvId,
     }
 
     if (files && files.length > 0) {
@@ -506,6 +505,10 @@ const Main: FC<IMainProps> = () => {
       id: placeholderAnswerId,
       content: '',
       isAnswer: true,
+      botId: activeAgent?.id,
+      botName: activeAgent?.name,
+      botAvatar: activeAgent?.avatar,
+      botRole: activeAgent?.role,
     }
 
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
@@ -519,6 +522,10 @@ const Main: FC<IMainProps> = () => {
       agent_thoughts: [],
       message_files: [],
       isAnswer: true,
+      botId: activeAgent?.id,
+      botName: activeAgent?.name,
+      botAvatar: activeAgent?.avatar,
+      botRole: activeAgent?.role,
     }
     let hasSetResponseId = false
     const prevTempNewConversationId = getCurrConversationId() || '-1'
@@ -543,7 +550,13 @@ const Main: FC<IMainProps> = () => {
           hasSetResponseId = true
         }
 
-        if (isFirstMessage && newConversationId) { tempNewConversationId = newConversationId }
+        if (newConversationId) {
+          tempNewConversationId = newConversationId
+          setBotConversationMap(prev => ({
+            ...prev,
+            [targetBotId]: newConversationId,
+          }))
+        }
 
         if (prevTempNewConversationId !== getCurrConversationId()) { return }
 
@@ -808,12 +821,9 @@ const Main: FC<IMainProps> = () => {
           onFeedback={handleFeedback}
           isResponding={isResponding}
           darkMode={darkMode}
-          selectedSkill={selectedSkill}
-          setSelectedSkill={setSelectedSkill}
-          skills={skills}
-          documentTemplates={documentTemplates}
-          selectedDocTemplate={selectedDocTemplate}
-          setSelectedDocTemplate={setSelectedDocTemplate}
+          activeAgent={activeAgent}
+          agentsList={AGENTS_LIST}
+          onSelectAgent={handleSelectAgent}
           isSpeakingMessageId={isSpeakingMessageId}
           onSpeakToggle={speakText}
           isRecordingAudio={isRecordingAudio}

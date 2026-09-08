@@ -14,7 +14,10 @@ import {
   Sun,
   Moon,
   Sliders,
+  Key,
+  ShieldCheck,
 } from 'lucide-react'
+import { AGENTS_LIST } from '@/config/agents'
 
 export interface UserCustomization {
   userName: string
@@ -137,8 +140,23 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
   darkMode,
   setDarkMode,
 }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'visual' | 'voice'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'visual' | 'voice' | 'agents'>('profile')
   const [formData, setFormData] = useState<UserCustomization>(customization)
+  const [botKeys, setBotKeys] = useState<Record<string, string>>(() => {
+    const keys: Record<string, string> = {}
+    if (typeof window !== 'undefined') {
+      try {
+        AGENTS_LIST.forEach((a) => {
+          keys[a.id] = localStorage.getItem(`amyet_custom_key_${a.id}`) || ''
+        })
+      }
+      catch (e) {
+        // ignore
+      }
+    }
+    return keys
+  })
+
   const userPhotoInputRef = useRef<HTMLInputElement>(null)
   const botPhotoInputRef = useRef<HTMLInputElement>(null)
 
@@ -171,6 +189,21 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
   }
 
   const handleSaveAll = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        Object.entries(botKeys).forEach(([id, key]) => {
+          if (key.trim()) {
+            localStorage.setItem(`amyet_custom_key_${id}`, key.trim())
+          }
+          else {
+            localStorage.removeItem(`amyet_custom_key_${id}`)
+          }
+        })
+      }
+      catch (e) {
+        // ignore
+      }
+    }
     onSave(formData)
     onClose()
   }
@@ -197,7 +230,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold tracking-tight">Personalización de la Interfaz</h3>
-              <p className="text-xs text-slate-400">Personaliza tu foto de perfil, avatar, colores y estilo visual</p>
+              <p className="text-xs text-slate-400">Personaliza tu foto de perfil, avatar, colores y API Keys de agentes</p>
             </div>
           </div>
           <button
@@ -220,7 +253,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
             }`}
           >
             <User className="h-4 w-4" />
-            <span>Perfil de Usuario</span>
+            <span>Perfil</span>
           </button>
 
           <button
@@ -233,7 +266,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
             }`}
           >
             <Palette className="h-4 w-4" />
-            <span>Apariencia Visual</span>
+            <span>Apariencia</span>
           </button>
 
           <button
@@ -246,7 +279,20 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
             }`}
           >
             <Volume2 className="h-4 w-4" />
-            <span>Voz y Audio</span>
+            <span>Voz</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('agents')}
+            className={`flex items-center gap-2 pb-3 px-2 text-xs font-semibold border-b-2 transition-all shrink-0 cursor-pointer ${
+              activeTab === 'agents'
+                ? 'border-emerald-400 text-emerald-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Key className="h-4 w-4" />
+            <span>Agentes & API Keys</span>
           </button>
         </div>
 
@@ -569,6 +615,96 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
                 <p className="text-[11px] text-slate-400">
                   Puedes activar el dictado por voz en tiempo real con el botón de auriculares en la barra superior o el ícono de micrófono del chat.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: AGENTES DIFY & API KEYS                            */}
+          {/* ========================================================= */}
+          {activeTab === 'agents' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                <div className="flex items-center gap-2 font-semibold text-xs text-emerald-400">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Configuración Centralizada de los 7 Bots</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Ingresa las API Keys generadas en Dify para cada agente aquí o configúralas en el archivo <code className="text-emerald-300 font-mono text-[10px]">.env.local</code>. Si dejas una clave vacía, usará la conexión operativa por defecto.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {AGENTS_LIST.map((agent) => {
+                  const hasCustomKey = Boolean(botKeys[agent.id]?.trim())
+                  const hasEnvKey = Boolean(agent.apiKey)
+                  return (
+                    <div
+                      key={agent.id}
+                      className={`p-3 rounded-2xl border transition-all ${
+                        darkMode ? 'bg-slate-900/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <img
+                            src={agent.avatar}
+                            alt={agent.name}
+                            className="h-7 w-7 rounded-xl object-cover shrink-0 border border-slate-700"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs">{agent.name}</span>
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded border font-mono ${agent.badgeColor}`}>
+                                {agent.role}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 truncate block">{agent.subtitle}</span>
+                          </div>
+                        </div>
+
+                        {/* Estado */}
+                        <div className="shrink-0">
+                          {hasCustomKey
+                            ? (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Clave Lista
+                              </span>
+                            )
+                            : hasEnvKey
+                              ? (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                  Activo (.env)
+                                </span>
+                              )
+                              : (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  Fallback Activo
+                                </span>
+                              )}
+                        </div>
+                      </div>
+
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                          <span>API Key de Dify:</span>
+                          <span className="font-mono text-[9px] text-slate-500">{agent.apiKeyEnvVar}</span>
+                        </div>
+                        <input
+                          type="password"
+                          value={botKeys[agent.id] || ''}
+                          onChange={e => setBotKeys(prev => ({ ...prev, [agent.id]: e.target.value }))}
+                          placeholder={agent.apiKey ? `Clave activa (${agent.apiKey.substring(0, 7)}...)` : 'Pega aquí la API Key de Dify (app-...)'}
+                          className={`w-full px-3 py-1.5 rounded-xl text-xs font-mono outline-none border transition-colors ${
+                            darkMode
+                              ? 'bg-slate-950/80 border-slate-700/80 focus:border-emerald-500 text-white placeholder:text-slate-600'
+                              : 'bg-white border-slate-300 focus:border-emerald-500 text-slate-900 placeholder:text-slate-400'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

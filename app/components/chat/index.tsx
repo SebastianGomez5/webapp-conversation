@@ -3,7 +3,6 @@ import type { FC } from 'react'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Paperclip,
-  Globe,
   Mic,
   MicOff,
   Send,
@@ -23,6 +22,7 @@ import type { FileUpload } from '@/app/components/base/file-uploader-in-attachme
 import { fileUpload } from '@/app/components/base/file-uploader-in-attachment/utils'
 import type { UserCustomization } from '@/app/components/settings/customization-modal'
 import { ACCENT_COLOR_MAP } from '@/app/components/settings/customization-modal'
+import type { AgentConfig } from '@/config/agents'
 
 export interface AttachedFileItem {
   id: string
@@ -45,12 +45,9 @@ export interface IChatProps {
   onStop?: () => void
   isResponding?: boolean
   darkMode?: boolean
-  selectedSkill: any
-  setSelectedSkill: (skill: any) => void
-  skills: any[]
-  documentTemplates: any[]
-  selectedDocTemplate: any
-  setSelectedDocTemplate: (doc: any) => void
+  activeAgent?: AgentConfig
+  agentsList?: AgentConfig[]
+  onSelectAgent?: (agent: AgentConfig) => void
   isSpeakingMessageId: string | null
   onSpeakToggle: (text: string, messageId: string) => void
   isRecordingAudio: boolean
@@ -72,12 +69,9 @@ const Chat: FC<IChatProps> = ({
   onStop = () => { },
   isResponding,
   darkMode = true,
-  selectedSkill,
-  setSelectedSkill,
-  skills,
-  documentTemplates,
-  selectedDocTemplate,
-  setSelectedDocTemplate,
+  activeAgent,
+  agentsList = [],
+  onSelectAgent,
   isSpeakingMessageId,
   onSpeakToggle,
   isRecordingAudio,
@@ -86,7 +80,7 @@ const Chat: FC<IChatProps> = ({
   setInputText,
   customization,
 }) => {
-  const [showSkillDropdown, setShowSkillDropdown] = useState(false)
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -215,6 +209,13 @@ const Chat: FC<IChatProps> = ({
     setAttachedFiles([])
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -258,8 +259,9 @@ const Chat: FC<IChatProps> = ({
                 darkMode={darkMode}
                 isSpeaking={isSpeakingMessageId === item.id}
                 onSpeakToggle={onSpeakToggle}
-                botAvatar={customization?.botAvatar}
-                botName={customization?.botName}
+                botAvatar={item.botAvatar || activeAgent?.avatar || customization?.botAvatar}
+                botName={item.botName || activeAgent?.name || customization?.botName}
+                botRole={item.botRole || activeAgent?.role}
               />
             )
           }
@@ -290,63 +292,54 @@ const Chat: FC<IChatProps> = ({
               : 'bg-white/95 border-slate-200 focus-within:border-emerald-500 shadow-slate-200'
           }`}
         >
-          {/* Chips de Adjuntos Pendientes */}
+          {/* Previsualización de Archivos Adjuntos */}
           {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 sm:gap-2 px-3 sm:px-4 pt-2.5">
+            <div className="p-2.5 sm:p-3 border-b border-inherit flex flex-wrap gap-2 max-h-36 overflow-y-auto scrollbar-thin">
               {attachedFiles.map(file => (
                 <div
                   key={file.id}
-                  className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-mono border ${
+                  className={`flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-xl border text-xs shadow-sm transition-all ${
                     file.error
                       ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                       : darkMode
-                        ? 'bg-slate-800/80 border-slate-700 text-slate-200'
+                        ? 'bg-slate-800/90 border-slate-700/80 text-slate-200'
                         : 'bg-slate-100 border-slate-300 text-slate-800'
                   }`}
                 >
-                  {file.uploading
+                  {file.type === 'image' && file.url
                     ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-amber-400 shrink-0" />
+                      <img src={file.url} alt={file.name} className="h-6 w-6 rounded-md object-cover" />
                     )
-                    : file.type === 'url'
-                      ? (
-                        <Globe className="h-3 w-3 text-cyan-400 shrink-0" />
-                      )
-                      : (
-                        <FileText className="h-3 w-3 text-amber-400 shrink-0" />
-                      )}
-                  <span className="max-w-[110px] sm:max-w-[150px] truncate">{file.name}</span>
+                    : (
+                      <FileText className="h-4 w-4 text-emerald-400 shrink-0" />
+                    )}
+
+                  <span className="max-w-[120px] sm:max-w-[160px] truncate font-medium">{file.name}</span>
+
+                  {file.uploading && <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />}
+
                   <button
                     type="button"
-                    onClick={() => setAttachedFiles(attachedFiles.filter(i => i.id !== file.id))}
-                    className="hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
+                    onClick={() => removeFile(file.id)}
+                    className="p-1 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Caja de Texto Principal */}
-          <form onSubmit={handleSendMessage} className="p-2 sm:p-3 pt-1">
+          {/* Formulario de Entrada Principal */}
+          <form onSubmit={handleSendMessage} className="p-2 sm:p-3 space-y-2">
             <textarea
               ref={textareaRef}
+              rows={2}
               value={inputText}
               onChange={e => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage()
-                }
-              }}
-              rows={2}
-              placeholder={
-                isRecordingAudio
-                  ? 'Escuchando tu voz...'
-                  : 'Escribe una instrucción, consulta de CRM o tarea...'
-              }
+              placeholder={`Pregunta a ${activeAgent?.name || 'Carlos'}... (Shift + Enter para salto de línea)`}
               className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-slate-500 font-normal leading-relaxed text-inherit"
             />
 
@@ -388,93 +381,70 @@ const Chat: FC<IChatProps> = ({
                   {isRecordingAudio ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
 
-                {/* Selector Desplegable de Habilidad del Chat */}
+                {/* Selector Desplegable de Agente Dify (Multi-Agent Switcher) */}
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setShowSkillDropdown(!showSkillDropdown)}
-                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg font-medium text-[11px] sm:text-xs transition-all cursor-pointer ${
+                    onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl font-medium text-[11px] sm:text-xs transition-all cursor-pointer border ${
                       darkMode
-                        ? 'bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                        ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700/60'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
                     }`}
                   >
-                    {selectedSkill?.icon && <selectedSkill.icon className={`h-3.5 w-3.5 shrink-0 ${selectedSkill.color || 'text-emerald-400'}`} />}
-                    <span className="truncate max-w-[120px] sm:max-w-none">{selectedSkill?.name || 'General'}</span>
+                    <img
+                      src={activeAgent?.avatar || 'https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg'}
+                      alt={activeAgent?.name || 'Carlos'}
+                      className="h-4 w-4 rounded-full object-cover shrink-0 border border-slate-600"
+                    />
+                    <span className="font-semibold">{activeAgent?.name || 'CARLOS'}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded border hidden sm:inline-block ${activeAgent?.badgeColor || 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                      {activeAgent?.role || 'Director'}
+                    </span>
                     <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
                   </button>
 
-                  {showSkillDropdown && (
+                  {showAgentDropdown && (
                     <div
-                      className={`absolute bottom-full mb-2 left-0 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl border p-2 shadow-2xl z-50 max-h-[70vh] overflow-y-auto scrollbar-thin ${
+                      className={`absolute bottom-full mb-2 left-0 w-[calc(100vw-1.5rem)] max-w-sm sm:w-80 rounded-2xl border p-2 shadow-2xl z-50 max-h-[70vh] overflow-y-auto scrollbar-thin ${
                         darkMode ? 'bg-[#0E1422] border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
                       }`}
                     >
-                      <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Habilidad del Chat</div>
+                      <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Seleccionar Agente Dify</span>
+                        <span className="text-[9px] text-emerald-400 font-mono">7 Bots Disponibles</span>
+                      </div>
 
-                      <div className="space-y-1">
-                        {skills.map(s => (
-                          <div key={s.id} className="space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedSkill(s)
-                                if (!s.isDocumentGenerator) {
-                                  setSelectedDocTemplate(null)
-                                  setShowSkillDropdown(false)
-                                }
-                              }}
-                              className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
-                                selectedSkill?.id === s.id
-                                  ? darkMode ? 'bg-slate-800/90 text-white border border-slate-700' : 'bg-slate-100 text-slate-900 border border-slate-300'
-                                  : darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
-                              }`}
-                            >
-                              <s.icon className={`h-4 w-4 mt-0.5 shrink-0 ${s.color}`} />
-                              <div className="flex flex-col flex-1 min-w-0">
-                                <span className="text-xs font-semibold flex items-center justify-between">
-                                  <span className="truncate">{s.name}</span>
-                                  {s.isDocumentGenerator && (
-                                    <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0 ml-1">3 Tipos</span>
-                                  )}
+                      <div className="space-y-1 mt-1">
+                        {agentsList.map(agent => (
+                          <button
+                            key={agent.id}
+                            type="button"
+                            onClick={() => {
+                              onSelectAgent?.(agent)
+                              setShowAgentDropdown(false)
+                            }}
+                            className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
+                              activeAgent?.id === agent.id
+                                ? darkMode ? 'bg-slate-800 text-white border border-slate-700 shadow-sm' : 'bg-slate-100 text-slate-900 border border-slate-300'
+                                : darkMode ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <img
+                              src={agent.avatar}
+                              alt={agent.name}
+                              className="h-8 w-8 rounded-xl object-cover shrink-0 mt-0.5 border border-slate-700"
+                            />
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold truncate">{agent.name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono font-medium ${agent.badgeColor}`}>
+                                  {agent.role}
                                 </span>
-                                <span className="text-[10px] text-slate-400 line-clamp-2">{s.desc}</span>
                               </div>
-                            </button>
-
-                            {/* Opciones de Documentos al seleccionar Generador */}
-                            {s.isDocumentGenerator && selectedSkill?.id === s.id && (
-                              <div className={`ml-4 pl-3 border-l-2 space-y-1.5 my-1.5 ${darkMode ? 'border-amber-500/40' : 'border-amber-400'}`}>
-                                <div className="text-[10px] font-semibold text-amber-400/90 uppercase tracking-wider">Opciones de Documento:</div>
-                                {documentTemplates.map(doc => (
-                                  <button
-                                    key={doc.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedDocTemplate(doc)
-                                      setInputText(doc.prompt)
-                                      setShowSkillDropdown(false)
-                                    }}
-                                    className={`w-full text-left p-2 rounded-lg border transition-all cursor-pointer ${
-                                      selectedDocTemplate?.id === doc.id
-                                        ? darkMode
-                                          ? 'bg-amber-500/20 border-amber-500/40 text-amber-200'
-                                          : 'bg-amber-100 border-amber-300 text-amber-900'
-                                        : darkMode
-                                          ? 'bg-slate-900/60 border-slate-800 hover:bg-slate-850 text-slate-300'
-                                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between text-[11px] font-medium">
-                                      <span>{doc.title}</span>
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/20 text-amber-400 font-mono">{doc.badge}</span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{doc.desc}</p>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                              <span className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{agent.subtitle}</span>
+                            </div>
+                          </button>
                         ))}
                       </div>
                     </div>
