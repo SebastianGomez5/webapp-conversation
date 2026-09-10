@@ -11,6 +11,7 @@ import {
   Radio,
   Globe,
   X,
+  Menu,
 } from 'lucide-react'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
@@ -764,7 +765,19 @@ const Main: FC<IMainProps> = () => {
             darkMode ? 'border-slate-800/80 bg-[#090D14]/80' : 'border-slate-200/80 bg-white/80'
           }`}
         >
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Botón Abrir Menú Lateral en Móvil */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className={`md:hidden p-1.5 rounded-xl border transition-colors shrink-0 ${
+                darkMode ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+              }`}
+              title="Abrir historial de conversaciones"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+
             <div className="flex flex-col min-w-0">
               <h2 className="text-xs sm:text-sm font-semibold truncate">
                 {conversationName}

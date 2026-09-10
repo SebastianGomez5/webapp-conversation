@@ -66,10 +66,10 @@ const Sidebar: FC<ISidebarProps> = ({
 
   return (
     <aside
-      className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 ${
+      className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col h-full border-r transition-all duration-300 ease-in-out shrink-0 overflow-hidden ${
         sidebarOpen
-          ? 'w-72 sm:w-80 translate-x-0 shadow-2xl md:shadow-none'
-          : '-translate-x-full md:translate-x-0 md:w-20 w-0'
+          ? 'w-72 sm:w-80 translate-x-0 shadow-2xl md:shadow-none visible'
+          : '-translate-x-full md:translate-x-0 w-72 md:w-20 pointer-events-none md:pointer-events-auto invisible md:visible'
       } ${
         darkMode
           ? 'border-slate-800/70 bg-[#0E131F] text-slate-100'
@@ -77,50 +77,53 @@ const Sidebar: FC<ISidebarProps> = ({
       }`}
     >
       {/* Logo & Marca */}
-      <div className="flex h-16 items-center justify-center relative px-4 border-b border-inherit shrink-0">
-        {sidebarOpen
-          ? (
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              className="flex items-center justify-center w-full h-full overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none py-2"
-              title="Ocultar historial de chats"
-            >
-              <img
-                src={darkMode ? '/logo-studio-dark.png' : '/logo-studio-light.png'}
-                alt="Álvaro Díaz Studio"
-                className="h-9 w-auto max-w-[210px] object-contain transition-transform group-hover:scale-105"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none'
-                }}
-              />
-            </button>
-          )
-          : (
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              className="flex items-center justify-center w-full h-full cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
-              title="Mostrar historial de chats"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+      <div className="flex h-16 items-center justify-between px-3 sm:px-4 border-b border-inherit shrink-0">
+        <div className="flex items-center min-w-0 flex-1 h-full py-2">
+          {sidebarOpen
+            ? (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                className="flex items-center w-full h-full overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+                title="Ocultar historial de chats"
+              >
                 <img
-                  src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png"
-                  alt="Logo"
-                  className="w-7 h-7 object-contain transition-transform group-hover:scale-105"
+                  src={darkMode ? '/logo-studio-dark.png' : '/logo-studio-light.png'}
+                  alt="Álvaro Díaz Studio"
+                  className="h-8 sm:h-9 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105"
                   onError={(e) => {
                     (e.currentTarget as HTMLElement).style.display = 'none'
                   }}
                 />
-              </div>
-            </button>
-          )}
+              </button>
+            )
+            : (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                className="flex items-center justify-center w-full h-full cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+                title="Mostrar historial de chats"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+                  <img
+                    src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png"
+                    alt="Logo"
+                    className="w-7 h-7 object-contain transition-transform group-hover:scale-105"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none'
+                    }}
+                  />
+                </div>
+              </button>
+            )}
+        </div>
 
-        {/* Mobile close button */}
-        {onCloseSidebarMobile && (
+        {/* Mobile close button: bien espaciado a la derecha sin sobreponerse */}
+        {sidebarOpen && onCloseSidebarMobile && (
           <button
+            type="button"
             onClick={onCloseSidebarMobile}
-            className="md:hidden absolute right-3 p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            className="md:hidden p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors shrink-0 ml-1.5"
             title="Cerrar panel"
           >
             <X className="h-5 w-5" />

@@ -185,6 +185,20 @@ const Chat: FC<IChatProps> = ({
     }
   }
 
+  const removeFile = (fileId: string) => {
+    setAttachedFiles((prev) => {
+      const target = prev.find(item => item.id === fileId)
+      if (target?.type === 'image' && target.url && target.url.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(target.url)
+        }
+        catch {
+        }
+      }
+      return prev.filter(item => item.id !== fileId)
+    })
+  }
+
   const handleSendMessage = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (isResponding) { return }
@@ -386,7 +400,7 @@ const Chat: FC<IChatProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAgentDropdown(!showAgentDropdown)}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl font-medium text-[11px] sm:text-xs transition-all cursor-pointer border ${
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl font-medium text-[11px] sm:text-xs transition-all cursor-pointer border ${
                       darkMode
                         ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700/60'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
@@ -397,57 +411,65 @@ const Chat: FC<IChatProps> = ({
                       alt={activeAgent?.name || 'Carlos'}
                       className="h-4 w-4 rounded-full object-cover shrink-0 border border-slate-600"
                     />
-                    <span className="font-semibold">{activeAgent?.name || 'CARLOS'}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded border hidden sm:inline-block ${activeAgent?.badgeColor || 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                    <span className="font-semibold truncate max-w-[75px] sm:max-w-none">{activeAgent?.name || 'CARLOS'}</span>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded border hidden md:inline-block ${activeAgent?.badgeColor || 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
                       {activeAgent?.role || 'Director'}
                     </span>
                     <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
                   </button>
 
                   {showAgentDropdown && (
-                    <div
-                      className={`absolute bottom-full mb-2 left-0 w-[calc(100vw-1.5rem)] max-w-sm sm:w-80 rounded-2xl border p-2 shadow-2xl z-50 max-h-[70vh] overflow-y-auto scrollbar-thin ${
-                        darkMode ? 'bg-[#0E1422] border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                        <span>Seleccionar Agente Dify</span>
-                        <span className="text-[9px] text-emerald-400 font-mono">7 Bots Disponibles</span>
-                      </div>
+                    <>
+                      {/* Backdrop para cerrar al tocar afuera en móviles */}
+                      <div
+                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
+                        onClick={() => setShowAgentDropdown(false)}
+                      />
 
-                      <div className="space-y-1 mt-1">
-                        {agentsList.map(agent => (
-                          <button
-                            key={agent.id}
-                            type="button"
-                            onClick={() => {
-                              onSelectAgent?.(agent)
-                              setShowAgentDropdown(false)
-                            }}
-                            className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
-                              activeAgent?.id === agent.id
-                                ? darkMode ? 'bg-slate-800 text-white border border-slate-700 shadow-sm' : 'bg-slate-100 text-slate-900 border border-slate-300'
-                                : darkMode ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
-                            }`}
-                          >
-                            <img
-                              src={agent.avatar}
-                              alt={agent.name}
-                              className="h-8 w-8 rounded-xl object-cover shrink-0 mt-0.5 border border-slate-700"
-                            />
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold truncate">{agent.name}</span>
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono font-medium ${agent.badgeColor}`}>
-                                  {agent.role}
-                                </span>
+                      <div
+                        className={`fixed sm:absolute inset-x-3 sm:inset-x-auto sm:left-0 bottom-24 sm:bottom-full mb-0 sm:mb-2 sm:w-85 rounded-2xl border p-2.5 sm:p-2 shadow-2xl z-50 max-h-[65vh] sm:max-h-[70vh] overflow-y-auto scrollbar-thin ${
+                          darkMode ? 'bg-[#0E1422] border-slate-800 text-slate-200 shadow-black/80' : 'bg-white border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-inherit pb-1.5 mb-1.5">
+                          <span>Seleccionar Agente Dify</span>
+                          <span className="text-[9px] text-emerald-400 font-mono font-bold">7 Bots Activos</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          {agentsList.map(agent => (
+                            <button
+                              key={agent.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectAgent?.(agent)
+                                setShowAgentDropdown(false)
+                              }}
+                              className={`w-full flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                                activeAgent?.id === agent.id
+                                  ? darkMode ? 'bg-slate-800 text-white border border-slate-700 shadow-sm' : 'bg-slate-100 text-slate-900 border border-slate-300'
+                                  : darkMode ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <img
+                                src={agent.avatar}
+                                alt={agent.name}
+                                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-cover shrink-0 border border-slate-700"
+                              />
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                  <span className="text-xs sm:text-sm font-bold truncate">{agent.name}</span>
+                                  <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded border font-mono font-medium truncate shrink-0 max-w-[130px] sm:max-w-none text-center ${agent.badgeColor}`}>
+                                    {agent.role}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] sm:text-[11px] text-slate-400 truncate mt-0.5">{agent.subtitle}</span>
                               </div>
-                              <span className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{agent.subtitle}</span>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>

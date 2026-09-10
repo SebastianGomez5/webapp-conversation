@@ -144,13 +144,6 @@ const Answer: FC<IAnswerProps> = ({
           <span className="text-[11px] sm:text-xs font-semibold tracking-tight text-slate-300">
             {botName || 'CARLOS'}
           </span>
-          {botRole && (
-            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono border ${
-              darkMode ? 'bg-slate-800/80 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-600 border-slate-200'
-            }`}>
-              {botRole}
-            </span>
-          )}
         </div>
 
         {/* Burbuja Principal */}
@@ -171,7 +164,7 @@ const Answer: FC<IAnswerProps> = ({
             ? (
               <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono py-1">
                 <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
-                <span>Consultando MCP & ejecutando razonamiento...</span>
+                <span>{botRole ? `${botRole} trabajando...` : 'Director de Operaciones trabajando...'}</span>
               </div>
             )
             : isAgentMode
