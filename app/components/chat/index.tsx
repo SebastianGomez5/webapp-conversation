@@ -224,7 +224,7 @@ const Chat: FC<IChatProps> = ({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleSendMessage()
     }
@@ -353,8 +353,8 @@ const Chat: FC<IChatProps> = ({
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={`Pregunta a ${activeAgent?.name || 'Carlos'}... (Shift + Enter para salto de línea)`}
-              className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-slate-500 font-normal leading-relaxed text-inherit"
+              placeholder={`Pregunta a ${activeAgent?.name || 'Carlos'}... (Enter para salto de línea)`}
+              className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-slate-500 font-normal leading-relaxed text-inherit min-h-[44px] max-h-48 overflow-y-auto scrollbar-thin"
             />
 
             {/* Botones de Acción */}
