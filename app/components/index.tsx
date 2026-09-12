@@ -927,7 +927,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   return (
-    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-300 ${
+    <div className={`fixed inset-0 flex h-full w-full overflow-hidden font-sans transition-colors duration-300 ${
       darkMode ? 'bg-[#090D14] text-slate-100' : 'bg-[#F8FAFC] text-slate-800'
     }`}>
       {/* ========================================================= */}
@@ -966,8 +966,8 @@ const Main: FC<IMainProps> = () => {
       <main className="flex flex-1 flex-col h-full min-w-0 relative overflow-hidden">
         {/* Barra Superior del Canvas */}
         <header
-          className={`flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 border-b z-10 backdrop-blur-md transition-colors shrink-0 ${
-            darkMode ? 'border-slate-800/80 bg-[#090D14]/80' : 'border-slate-200/80 bg-white/80'
+          className={`sticky top-0 flex h-14 sm:h-16 items-center justify-between px-3 sm:px-6 border-b z-30 backdrop-blur-md transition-colors shrink-0 ${
+            darkMode ? 'border-slate-800/80 bg-[#090D14]/90' : 'border-slate-200/80 bg-white/90'
           }`}
         >
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -975,12 +975,12 @@ const Main: FC<IMainProps> = () => {
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className={`md:hidden p-1.5 rounded-xl border transition-colors shrink-0 ${
-                darkMode ? 'border-slate-800 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+              className={`md:hidden p-2 rounded-xl border transition-colors shrink-0 flex items-center justify-center cursor-pointer ${
+                darkMode ? 'bg-slate-900 border-slate-700 hover:bg-slate-800 text-emerald-400' : 'bg-slate-100 border-slate-300 hover:bg-slate-200 text-emerald-600'
               }`}
               title="Abrir historial de conversaciones"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-5 w-5" />
             </button>
 
             <div className="flex flex-col min-w-0">
@@ -1052,6 +1052,7 @@ const Main: FC<IMainProps> = () => {
           inputText={inputText}
           setInputText={setInputText}
           customization={customization}
+          onOpenSidebarMobile={() => setSidebarOpen(true)}
         />
       </main>
 

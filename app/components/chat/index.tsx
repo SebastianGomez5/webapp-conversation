@@ -12,6 +12,7 @@ import {
   Square,
   Loader2,
   UploadCloud,
+  Menu,
 } from 'lucide-react'
 import type { FeedbackFunc } from './type'
 import Answer from './answer'
@@ -58,6 +59,7 @@ export interface IChatProps {
   inputText: string
   setInputText: (text: string) => void
   customization?: UserCustomization
+  onOpenSidebarMobile?: () => void
 }
 
 const Chat: FC<IChatProps> = ({
@@ -79,6 +81,7 @@ const Chat: FC<IChatProps> = ({
   inputText,
   setInputText,
   customization,
+  onOpenSidebarMobile,
 }) => {
   const [showAgentDropdown, setShowAgentDropdown] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -372,6 +375,22 @@ const Chat: FC<IChatProps> = ({
             {/* Botones de Acción */}
             <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-inherit">
               <div className="flex items-center gap-1 sm:gap-1.5">
+                {/* Botón Historial de Chats en Móvil */}
+                {onOpenSidebarMobile && (
+                  <button
+                    type="button"
+                    onClick={onOpenSidebarMobile}
+                    className={`md:hidden p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      darkMode
+                        ? 'bg-slate-800/90 border-slate-700/80 text-emerald-400 hover:bg-slate-700'
+                        : 'bg-slate-100 border-slate-200 text-emerald-600 hover:bg-slate-200'
+                    }`}
+                    title="Ver historial de chats"
+                  >
+                    <Menu className="h-4 w-4" />
+                  </button>
+                )}
+
                 {/* Adjuntar Documento / Imagen */}
                 <label
                   className={`cursor-pointer p-1.5 sm:p-2 rounded-lg transition-colors ${
