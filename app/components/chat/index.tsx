@@ -224,9 +224,17 @@ const Chat: FC<IChatProps> = ({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault()
-      handleSendMessage()
+    if (customization?.sendOnEnter) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSendMessage()
+      }
+    }
+    else {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        handleSendMessage()
+      }
     }
   }
 
@@ -353,7 +361,11 @@ const Chat: FC<IChatProps> = ({
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={`Pregunta a ${activeAgent?.name || 'Carlos'}... (Enter para salto de línea)`}
+              placeholder={`Pregunta a ${activeAgent?.name || 'Carlos'}... (${
+                customization?.sendOnEnter
+                  ? 'Enter para enviar, Shift+Enter para salto'
+                  : 'Ctrl+Enter para enviar, Enter para salto'
+              })`}
               className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-slate-500 font-normal leading-relaxed text-inherit min-h-[44px] max-h-48 overflow-y-auto scrollbar-thin"
             />
 
@@ -420,9 +432,9 @@ const Chat: FC<IChatProps> = ({
 
                   {showAgentDropdown && (
                     <>
-                      {/* Backdrop para cerrar al tocar afuera en móviles */}
+                      {/* Backdrop universal para cerrar al dar clic afuera en cualquier dispositivo */}
                       <div
-                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
+                        className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent"
                         onClick={() => setShowAgentDropdown(false)}
                       />
 

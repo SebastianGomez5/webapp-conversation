@@ -44,8 +44,16 @@ export const fetchConversations = async () => {
   return get('conversations', { params: { limit: 100, first_id: '' } })
 }
 
-export const fetchChatList = async (conversationId: string) => {
-  return get('messages', { params: { conversation_id: conversationId, limit: 20, last_id: '' } })
+export const fetchChatList = async (conversationId: string, botId?: string) => {
+  return get('messages', {
+    params: {
+      conversation_id: conversationId,
+      limit: 50,
+      last_id: '',
+      ...(botId ? { bot_id: botId } : {}),
+    },
+    headers: botId ? { 'x-bot-id': botId } : undefined,
+  })
 }
 
 // init value. wait for server update
@@ -57,6 +65,16 @@ export const updateFeedback = async ({ url, body }: { url: string, body: Feedbac
   return post(url, { body })
 }
 
-export const generationConversationName = async (id: string) => {
-  return post(`conversations/${id}/name`, { body: { auto_generate: true } })
+export const generationConversationName = async (id: string, botId?: string) => {
+  return post(`conversations/${id}/name`, {
+    body: { auto_generate: true },
+    headers: botId ? { 'x-bot-id': botId } : undefined,
+  })
+}
+
+export const delConversation = async (id: string, botId?: string) => {
+  return post(`conversations/${id}`, {
+    method: 'DELETE',
+    headers: botId ? { 'x-bot-id': botId } : undefined,
+  })
 }

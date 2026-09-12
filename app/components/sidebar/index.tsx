@@ -7,16 +7,19 @@ import {
   Trash2,
   Settings,
   X,
+  LogOut,
 } from 'lucide-react'
 import type { ConversationItem } from '@/types/app'
 import type { UserCustomization } from '@/app/components/settings/customization-modal'
+import type { AuthenticatedUser } from '@/config/roles'
+import { getRoleDisplayName } from '@/config/roles'
 
 export interface ISidebarProps {
   list: ConversationItem[]
   currentId: string
-  onCurrentIdChange: (id: string) => void
+  onCurrentIdChange: (id: string, botId?: string) => void
   onNewChat: () => void
-  onDeleteChat?: (id: string) => void
+  onDeleteChat?: (id: string, botId?: string) => void
   darkMode: boolean
   sidebarOpen: boolean
   onToggleSidebar?: () => void
@@ -26,6 +29,18 @@ export interface ISidebarProps {
   onSearchQueryChange: (query: string) => void
   copyRight?: string
   customization?: UserCustomization
+  currentUser?: AuthenticatedUser | null
+  onLogout?: () => void
+}
+
+const BOT_BADGE_CONFIG: Record<string, { dot: string, activeGlow: string, text: string, name: string }> = {
+  carlos: { dot: 'bg-emerald-400', activeGlow: 'shadow-emerald-400/80 ring-emerald-400/40', text: 'text-emerald-400', name: 'Carlos' },
+  wendy: { dot: 'bg-rose-400', activeGlow: 'shadow-rose-400/80 ring-rose-400/40', text: 'text-rose-400', name: 'Wendy' },
+  jessica: { dot: 'bg-purple-400', activeGlow: 'shadow-purple-400/80 ring-purple-400/40', text: 'text-purple-400', name: 'Jessica' },
+  donald: { dot: 'bg-amber-400', activeGlow: 'shadow-amber-400/80 ring-amber-400/40', text: 'text-amber-400', name: 'Donald' },
+  elliot: { dot: 'bg-cyan-400', activeGlow: 'shadow-cyan-400/80 ring-cyan-400/40', text: 'text-cyan-400', name: 'Elliot' },
+  bobby: { dot: 'bg-yellow-400', activeGlow: 'shadow-yellow-400/80 ring-yellow-400/40', text: 'text-yellow-400', name: 'Bobby' },
+  darius: { dot: 'bg-blue-400', activeGlow: 'shadow-blue-400/80 ring-blue-400/40', text: 'text-blue-400', name: 'Darius' },
 }
 
 const Sidebar: FC<ISidebarProps> = ({
@@ -42,19 +57,19 @@ const Sidebar: FC<ISidebarProps> = ({
   searchQuery,
   onSearchQueryChange,
   customization,
+  currentUser,
+  onLogout,
 }) => {
   const filteredList = list.filter(item =>
     (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const handleSelectChat = (id: string) => {
-    onCurrentIdChange(id)
-    onCloseSidebarMobile?.()
+  const handleSelectChat = (id: string, botId?: string) => {
+    onCurrentIdChange(id, botId)
   }
 
   const handleCreateNewChat = () => {
     onNewChat()
-    onCloseSidebarMobile?.()
   }
 
   const userInitials = (customization?.userName || 'AD')
@@ -84,13 +99,13 @@ const Sidebar: FC<ISidebarProps> = ({
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="flex items-center w-full h-full overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+                className="flex items-center justify-center w-full h-full overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
                 title="Ocultar historial de chats"
               >
                 <img
                   src={darkMode ? '/logo-studio-dark.png' : '/logo-studio-light.png'}
                   alt="Álvaro Díaz Studio"
-                  className="h-8 sm:h-9 w-auto max-w-[170px] sm:max-w-[210px] object-contain transition-transform group-hover:scale-105"
+                  className="h-8 sm:h-9 w-auto max-w-[170px] sm:max-w-[210px] object-contain mx-auto transition-transform group-hover:scale-105"
                   onError={(e) => {
                     (e.currentTarget as HTMLElement).style.display = 'none'
                   }}
@@ -171,11 +186,13 @@ const Sidebar: FC<ISidebarProps> = ({
       <div className="flex-1 overflow-y-auto px-2 space-y-1 scrollbar-thin">
         {filteredList.map((chat) => {
           const isActive = chat.id === currentId
+          const botCfg = BOT_BADGE_CONFIG[chat.botId || 'carlos'] || BOT_BADGE_CONFIG.carlos
+
           return (
             <div
               key={chat.id}
-              onClick={() => handleSelectChat(chat.id)}
-              className={`group relative flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-xs transition-all ${
+              onClick={() => handleSelectChat(chat.id, chat.botId)}
+              className={`group relative flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-xs transition-all gap-2.5 ${
                 isActive
                   ? darkMode
                     ? 'bg-slate-800/80 text-white shadow-sm border border-slate-700/60 font-medium'
@@ -185,22 +202,34 @@ const Sidebar: FC<ISidebarProps> = ({
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <div className="flex items-center gap-2.5 truncate">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                {/* Puntico con el color distintivo del Agente */}
                 <div
-                  className={`h-2 w-2 rounded-full shrink-0 ${
-                    isActive ? 'bg-amber-400 shadow-sm shadow-amber-400/50' : 'bg-slate-600'
+                  className={`h-2.5 w-2.5 rounded-full shrink-0 transition-all ${botCfg.dot} ${
+                    isActive ? `shadow-md ring-2 ${botCfg.activeGlow} scale-110` : 'opacity-70 group-hover:opacity-100'
                   }`}
-                ></div>
-                {sidebarOpen && <span className="truncate">{chat.name || 'Nueva conversación'}</span>}
+                  title={`Agente: ${botCfg.name}`}
+                />
+
+                {sidebarOpen && (
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="truncate font-medium">{chat.name || 'Nueva conversación'}</span>
+                      <span className={`text-[9px] font-mono font-semibold shrink-0 opacity-80 ${botCfg.text}`}>
+                        {botCfg.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {sidebarOpen && onDeleteChat && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    onDeleteChat(chat.id)
+                    onDeleteChat(chat.id, chat.botId)
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity shrink-0"
                   title="Eliminar chat"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -224,17 +253,17 @@ const Sidebar: FC<ISidebarProps> = ({
           title="Personalizar perfil y aspecto visual"
         >
           <div className="relative shrink-0">
-            {customization?.userAvatar
+            {currentUser?.avatar || customization?.userAvatar
               ? (
                 <img
-                  src={customization.userAvatar}
-                  alt={customization.userName || 'Usuario'}
+                  src={currentUser?.avatar || customization?.userAvatar}
+                  alt={currentUser?.name || customization?.userName || 'Usuario'}
                   className="h-8 w-8 rounded-full object-cover border border-slate-700 shadow-sm"
                 />
               )
               : (
                 <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold border border-slate-700 text-slate-200">
-                  {userInitials}
+                  {currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : userInitials}
                 </div>
               )}
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900"></span>
@@ -242,10 +271,10 @@ const Sidebar: FC<ISidebarProps> = ({
           {sidebarOpen && (
             <div className="flex flex-col truncate">
               <span className="text-xs font-medium truncate group-hover:text-emerald-400 transition-colors">
-                {customization?.userName || 'Álvaro Díaz'}
+                {currentUser?.name || customization?.userName || 'Álvaro Díaz'}
               </span>
               <span className="text-[10px] text-slate-400 truncate">
-                {customization?.userRole || 'Admin Pro'}
+                {currentUser ? getRoleDisplayName(currentUser.role) : (customization?.userRole || 'Admin Pro')}
               </span>
             </div>
           )}
@@ -264,6 +293,19 @@ const Sidebar: FC<ISidebarProps> = ({
             >
               <Settings className="h-4 w-4" />
             </button>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  darkMode
+                    ? 'hover:bg-rose-500/20 text-slate-400 hover:text-rose-400'
+                    : 'hover:bg-rose-50 text-slate-600 hover:text-rose-600'
+                }`}
+                title="Cerrar Sesión"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
           </div>
         )}
       </div>

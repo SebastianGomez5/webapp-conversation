@@ -16,7 +16,7 @@ import {
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
-import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { delConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -31,6 +31,9 @@ import { CustomizationModal, DEFAULT_CUSTOMIZATION } from '@/app/components/sett
 import type { UserCustomization } from '@/app/components/settings/customization-modal'
 import { AGENTS_LIST, getAgentById } from '@/config/agents'
 import type { AgentConfig } from '@/config/agents'
+import LoginView from '@/app/components/auth/login-view'
+import type { AuthenticatedUser } from '@/config/roles'
+import { getRoleDisplayName } from '@/config/roles'
 
 export interface IMainProps {
   params: any
@@ -88,6 +91,50 @@ const Main: FC<IMainProps> = () => {
   const [showUrlModal, setShowUrlModal] = useState(false)
   const [urlInput, setUrlInput] = useState('')
 
+  // --- Autenticación & Usuario Activo de WordPress ---
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null)
+  const [authChecking, setAuthChecking] = useState(true)
+
+  const checkSession = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      if (res.ok && data.authenticated && data.user) {
+        setCurrentUser(data.user)
+      }
+    }
+    catch (e) {
+      console.error('Error checking auth:', e)
+    }
+    finally {
+      setAuthChecking(false)
+    }
+  }
+
+  useEffect(() => {
+    checkSession()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    }
+    catch {
+      // ignore
+    }
+    setCurrentUser(null)
+    setChatList([])
+    setConversationList([])
+    notify({ type: 'info', message: 'Has cerrado sesión en Studio.' })
+  }
+
+  // --- Agentes Disponibles según el Rol de Usuario (RBAC) ---
+  const allowedBots = currentUser?.allowed_bots || ['carlos']
+  const visibleAgents = AGENTS_LIST.filter(a => allowedBots.includes(a.id))
+
+  // --- Lista de Mensajes del Chat Unificado ---
+  const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
+
   // --- Agentes Dify (Multi-Agent Switcher) ---
   const [activeAgent, setActiveAgent] = useState<AgentConfig>(() => {
     if (typeof window !== 'undefined') {
@@ -102,6 +149,72 @@ const Main: FC<IMainProps> = () => {
     return AGENTS_LIST[0]
   })
 
+  // Sincronizar datos del usuario autenticado con la personalización y selección de bot
+  useEffect(() => {
+    if (currentUser) {
+      setCustomization(prev => ({
+        ...prev,
+        userName: currentUser.name || prev.userName,
+        userRole: getRoleDisplayName(currentUser.role) || prev.userRole,
+        userAvatar: currentUser.avatar || prev.userAvatar,
+      }))
+
+      let initialBot = activeAgent
+      if (currentUser.allowed_bots && currentUser.allowed_bots.length > 0) {
+        const savedBotId = typeof window !== 'undefined' ? localStorage.getItem('amyet_active_bot_id') : null
+        if (!savedBotId || !currentUser.allowed_bots.includes(savedBotId)) {
+          initialBot = getAgentById(currentUser.allowed_bots[0])
+          setActiveAgent(initialBot)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('amyet_active_bot_id', initialBot.id)
+          }
+        }
+      }
+
+      // Cargar lista de conversaciones limpias para este usuario
+      (async () => {
+        try {
+          const resConvs: any = await fetchConversations().catch(() => ({ data: [] }))
+          const conversations: ConversationItem[] = Array.isArray(resConvs?.data)
+            ? resConvs.data
+            : Array.isArray(resConvs)
+              ? resConvs
+              : []
+          setConversationList(conversations)
+          if (conversations.length > 0) {
+            const firstConv = conversations[0]
+            if (firstConv.botId) {
+              const b = getAgentById(firstConv.botId)
+              if (b) {
+                setActiveAgent(b)
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('amyet_active_bot_id', b.id)
+                }
+              }
+            }
+            setCurrConversationId(conversations[0].id, APP_ID)
+          }
+          else {
+            setChatList(generateNewChatListWithOpenStatement(undefined, undefined, initialBot))
+          }
+        }
+        catch {
+          setChatList(generateNewChatListWithOpenStatement(undefined, undefined, initialBot))
+        }
+      })()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (visibleAgents.length > 0 && !visibleAgents.some(a => a.id === activeAgent?.id)) {
+      const firstAllowed = visibleAgents[0]
+      setActiveAgent(firstAllowed)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('amyet_active_bot_id', firstAllowed.id)
+      }
+    }
+  }, [currentUser, visibleAgents, activeAgent])
+
   const [botConversationMap, setBotConversationMap] = useState<Record<string, string>>({})
 
   const handleSelectAgent = (agent: AgentConfig) => {
@@ -111,29 +224,17 @@ const Main: FC<IMainProps> = () => {
       try {
         localStorage.setItem('amyet_active_bot_id', agent.id)
       }
-      catch (e) {
+      catch {
         // ignore
       }
     }
-    // Seamlessly append transfer notice to existing chat without wiping the conversation history!
-    const transferNotice: ChatItem = {
-      id: `agent-switch-${Date.now()}`,
-      content: `✨ **Has conectado con ${agent.name}** (${agent.role})\n\n${agent.welcomeMessage}`,
-      isAnswer: true,
-      feedbackDisabled: true,
-      isOpeningStatement: false,
-      botId: agent.id,
-      botName: agent.name,
-      botAvatar: agent.avatar,
-      botRole: agent.role,
-      suggestedQuestions: agent.suggestedQuestions,
-    }
-    setChatList(produce(getChatList(), (draft) => {
-      draft.push(transferNotice)
-    }))
+
+    // Cada chat pertenece exclusivamente a un agente: abrir un chat limpio para el nuevo agente sin borrar los anteriores
+    createNewChat(agent)
+
     notify({
       type: 'success',
-      message: `Cambiado a ${agent.name} (${agent.role})`,
+      message: `Chat con ${agent.name} (${agent.role})`,
     })
   }
 
@@ -256,30 +357,34 @@ const Main: FC<IMainProps> = () => {
   const conversationIntroduction = currConversationInfo?.introduction || ''
   const suggestedQuestions = currConversationInfo?.suggested_questions || []
 
-  const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
+  const generateNewChatListWithOpenStatement = (introduction?: string, inputs?: Record<string, any> | null, agentToUse?: AgentConfig) => {
+    const targetAgent = agentToUse || activeAgent
+    const isCarlos = targetAgent?.id === 'carlos'
 
-  const generateNewChatListWithOpenStatement = (introduction?: string, inputs?: Record<string, any> | null) => {
-    let calculatedIntroduction = introduction || conversationIntroduction || activeAgent?.welcomeMessage || ''
+    let calculatedIntroduction = isCarlos
+      ? (introduction || conversationIntroduction || targetAgent?.welcomeMessage || '')
+      : (targetAgent?.welcomeMessage || '')
+
     const calculatedPromptVariables = inputs || currInputs || null
     if (calculatedIntroduction && calculatedPromptVariables) {
       calculatedIntroduction = replaceVarWithValues(calculatedIntroduction, promptConfig?.prompt_variables || [], calculatedPromptVariables)
     }
 
-    const questions = suggestedQuestions && suggestedQuestions.length > 0
+    const questions = (isCarlos && suggestedQuestions && suggestedQuestions.length > 0)
       ? suggestedQuestions
-      : activeAgent?.suggestedQuestions || []
+      : targetAgent?.suggestedQuestions || []
 
     const openStatement = {
       id: `${Date.now()}`,
-      content: calculatedIntroduction || activeAgent?.welcomeMessage || '👋 ¡Hola Álvaro! ¿En qué optimización de procesos o gestión trabajamos hoy?',
+      content: calculatedIntroduction || targetAgent?.welcomeMessage || '',
       isAnswer: true,
       feedbackDisabled: true,
       isOpeningStatement: isShowPrompt,
       suggestedQuestions: questions,
-      botId: activeAgent?.id,
-      botName: activeAgent?.name,
-      botAvatar: activeAgent?.avatar,
-      botRole: activeAgent?.role,
+      botId: targetAgent?.id,
+      botName: targetAgent?.name,
+      botAvatar: targetAgent?.avatar,
+      botRole: targetAgent?.role,
     }
     return [openStatement]
   }
@@ -299,69 +404,124 @@ const Main: FC<IMainProps> = () => {
         introduction: notSyncToStateIntroduction,
         suggested_questions: suggestedQuestions,
       })
+
+      const botForConv = item?.botId ? (AGENTS_LIST.find(a => a.id === item.botId) || activeAgent) : activeAgent
+      if (botForConv && botForConv.id !== activeAgent.id) {
+        setActiveAgent(botForConv)
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('amyet_active_bot_id', botForConv.id)
+          }
+          catch {
+            // ignore
+          }
+        }
+      }
+
+      if (!conversationIdChangeBecauseOfNew && !isResponding) {
+        fetchChatList(currConversationId, botForConv?.id).then((res: any) => {
+          const { data } = res
+          const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs, botForConv)
+
+          data.forEach((item: any) => {
+            newChatList.push({
+              id: `question-${item.id}`,
+              content: item.query,
+              isAnswer: false,
+              message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
+            })
+            newChatList.push({
+              id: item.id,
+              content: item.answer,
+              agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
+              feedback: item.feedback,
+              isAnswer: true,
+              message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
+              botId: botForConv?.id,
+              botName: botForConv?.name,
+              botAvatar: botForConv?.avatar,
+              botRole: botForConv?.role,
+            })
+          })
+          setChatList(newChatList)
+        })
+      }
     }
     else {
       notSyncToStateInputs = newConversationInputs
       setCurrInputs(notSyncToStateInputs)
-    }
-
-    if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding) {
-      fetchChatList(currConversationId).then((res: any) => {
-        const { data } = res
-        const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
-
-        data.forEach((item: any) => {
-          newChatList.push({
-            id: `question-${item.id}`,
-            content: item.query,
-            isAnswer: false,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
-          })
-          newChatList.push({
-            id: item.id,
-            content: item.answer,
-            agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
-            feedback: item.feedback,
-            isAnswer: true,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
-          })
-        })
-        setChatList(newChatList)
-      })
-    }
-
-    if (isNewConversation && isChatStarted) {
-      setChatList(generateNewChatListWithOpenStatement())
+      if (isChatStarted) {
+        setChatList(generateNewChatListWithOpenStatement(undefined, undefined, activeAgent))
+      }
     }
   }
 
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
-  const createNewChat = () => {
-    if (conversationList.some(item => item.id === '-1')) { return }
-
-    setConversationList(produce(conversationList, (draft) => {
-      draft.unshift({
+  const createNewChat = (agent = activeAgent) => {
+    const cleanList = conversationList.filter(item => item.id !== '-1')
+    setConversationList([
+      {
         id: '-1',
         name: 'Nueva conversación',
         inputs: newConversationInputs,
-        introduction: conversationIntroduction,
-        suggested_questions: suggestedQuestions,
-      })
-    }))
-    setChatList(generateNewChatListWithOpenStatement())
+        introduction: agent.welcomeMessage,
+        suggested_questions: agent.suggestedQuestions,
+        botId: agent.id,
+      },
+      ...cleanList,
+    ])
+    setCurrConversationId('-1', APP_ID)
+    setConversationIdChangeBecauseOfNew(true)
+    setChatList(generateNewChatListWithOpenStatement(undefined, undefined, agent))
   }
 
-  const handleConversationIdChange = (id: string) => {
+  const handleConversationIdChange = (id: string, botId?: string) => {
     setBotConversationMap({})
     if (id === '-1') {
-      createNewChat()
+      createNewChat(activeAgent)
       setConversationIdChangeBecauseOfNew(true)
     }
     else {
+      const targetConv = conversationList.find(c => c.id === id)
+      const targetBotId = botId || targetConv?.botId || activeAgent?.id || 'carlos'
+      const targetAgent = AGENTS_LIST.find(a => a.id === targetBotId) || AGENTS_LIST[0]
+      if (targetAgent && targetAgent.id !== activeAgent.id) {
+        setActiveAgent(targetAgent)
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('amyet_active_bot_id', targetAgent.id)
+          }
+          catch {
+            // ignore
+          }
+        }
+      }
       setConversationIdChangeBecauseOfNew(false)
     }
     setCurrConversationId(id, APP_ID)
+  }
+
+  const handleDeleteChat = async (id: string, botId?: string) => {
+    const targetConv = conversationList.find(c => c.id === id)
+    const targetBot = botId || targetConv?.botId || activeAgent?.id
+    try {
+      await delConversation(id, targetBot)
+      const updatedList = conversationList.filter(c => c.id !== id)
+      setConversationList(updatedList)
+      if (currConversationId === id) {
+        if (updatedList.length > 0) {
+          handleConversationIdChange(updatedList[0].id, updatedList[0].botId)
+        }
+        else {
+          createNewChat()
+        }
+      }
+      notify({ type: 'success', message: 'Conversación eliminada' })
+    }
+    catch {
+      notify({ type: 'error', message: 'No se pudo eliminar la conversación' })
+    }
   }
 
   // --- Carga Inicial de Parámetros ---
@@ -472,12 +632,12 @@ const Main: FC<IMainProps> = () => {
     }
 
     const targetBotId = activeAgent?.id || 'carlos'
-    const targetBotConvId = botConversationMap[targetBotId] || null
+    const isNew = isNewConversation || currConversationId === '-1'
 
     const data: Record<string, any> = {
       inputs: currInputs || {},
       query: message,
-      conversation_id: isNewConversation ? null : targetBotConvId,
+      conversation_id: isNew ? null : currConversationId,
     }
 
     if (files && files.length > 0) {
@@ -571,19 +731,33 @@ const Main: FC<IMainProps> = () => {
       async onCompleted(hasError?: boolean) {
         if (hasError) { return }
 
-        if (getConversationIdChangeBecauseOfNew()) {
-          const { data: allConversations }: any = await fetchConversations()
-          const newItem: any = await generationConversationName(allConversations[0].id)
-
-          const newAllConversations = produce(allConversations, (draft: any) => {
-            draft[0].name = newItem.name
-          })
-          setConversationList(newAllConversations as any)
+        if (getConversationIdChangeBecauseOfNew() || isNew) {
+          const res: any = await fetchConversations().catch(() => ({ data: [] }))
+          const allConvs: ConversationItem[] = Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res)
+              ? res
+              : []
+          if (tempNewConversationId) {
+            try {
+              const nameRes: any = await generationConversationName(tempNewConversationId, targetBotId)
+              const idx = allConvs.findIndex(c => c.id === tempNewConversationId)
+              if (idx !== -1 && nameRes?.name) {
+                allConvs[idx].name = nameRes.name
+              }
+            }
+            catch {
+              // ignore
+            }
+          }
+          setConversationList(allConvs)
         }
         setConversationIdChangeBecauseOfNew(false)
         resetNewConversationInputs()
         setChatNotStarted()
-        setCurrConversationId(tempNewConversationId, APP_ID, true)
+        if (tempNewConversationId) {
+          setCurrConversationId(tempNewConversationId, APP_ID, true)
+        }
         setRespondingFalse()
       },
       onFile(file) {
@@ -716,6 +890,34 @@ const Main: FC<IMainProps> = () => {
     }
   }
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#070A12] text-slate-100 font-sans select-none">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#090D18] border border-slate-700/60 p-2.5 shadow-xl animate-pulse">
+            <img
+              src="https://studioalvarodiaz.es/wp-content/uploads/2026/07/ICONO-simbolo-del-vortice.png"
+              alt="Álvaro Díaz Studio"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <span className="text-xs text-slate-400 font-mono">Conectando con Álvaro Díaz Studio...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentUser) {
+    return (
+      <LoginView
+        onLoginSuccess={(user) => {
+          setCurrentUser(user)
+          notify({ type: 'success', message: `¡Bienvenido ${user.name}!` })
+        }}
+      />
+    )
+  }
+
   if (appUnavailable) {
     return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} />
   }
@@ -736,6 +938,7 @@ const Main: FC<IMainProps> = () => {
         currentId={currConversationId}
         onCurrentIdChange={handleConversationIdChange}
         onNewChat={() => handleConversationIdChange('-1')}
+        onDeleteChat={handleDeleteChat}
         darkMode={darkMode}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -745,6 +948,8 @@ const Main: FC<IMainProps> = () => {
         onSearchQueryChange={setSearchQuery}
         copyRight={APP_INFO.copyright || APP_INFO.title}
         customization={customization}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Overlay oscuro para móviles cuando el sidebar está abierto */}
@@ -835,7 +1040,7 @@ const Main: FC<IMainProps> = () => {
           isResponding={isResponding}
           darkMode={darkMode}
           activeAgent={activeAgent}
-          agentsList={AGENTS_LIST}
+          agentsList={visibleAgents}
           onSelectAgent={handleSelectAgent}
           isSpeakingMessageId={isSpeakingMessageId}
           onSpeakToggle={speakText}
@@ -951,6 +1156,7 @@ const Main: FC<IMainProps> = () => {
         onSave={handleSaveCustomization}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
+        currentUser={currentUser}
       />
     </div>
   )

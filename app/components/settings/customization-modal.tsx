@@ -1,5 +1,4 @@
-'use client'
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { FC } from 'react'
 import {
   User,
@@ -18,6 +17,8 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { AGENTS_LIST } from '@/config/agents'
+import type { AuthenticatedUser } from '@/config/roles'
+import { getRoleDisplayName } from '@/config/roles'
 
 export interface UserCustomization {
   userName: string
@@ -28,17 +29,19 @@ export interface UserCustomization {
   accentColor: 'emerald' | 'cyan' | 'amber' | 'violet' | 'rose' | 'blue'
   fontSize: 'small' | 'normal' | 'large'
   speechRate: number
+  sendOnEnter?: boolean
 }
 
 export const DEFAULT_CUSTOMIZATION: UserCustomization = {
-  userName: 'Álvaro Díaz',
-  userRole: 'Admin Pro',
+  userName: '',
+  userRole: '',
   userAvatar: '',
   botAvatar: 'https://studioalvarodiaz.es/wp-content/uploads/2026/07/Carlos-scaled.jpg',
   botName: 'Carlos - Asistente IA',
   accentColor: 'emerald',
   fontSize: 'normal',
   speechRate: 1,
+  sendOnEnter: true,
 }
 
 export const ACCENT_COLOR_MAP = {
@@ -130,6 +133,7 @@ export interface ICustomizationModalProps {
   onSave: (newSettings: UserCustomization) => void
   darkMode: boolean
   setDarkMode: (val: boolean) => void
+  currentUser?: AuthenticatedUser | null
 }
 
 export const CustomizationModal: FC<ICustomizationModalProps> = ({
@@ -139,9 +143,26 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
   onSave,
   darkMode,
   setDarkMode,
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'visual' | 'voice' | 'agents'>('profile')
-  const [formData, setFormData] = useState<UserCustomization>(customization)
+  const [formData, setFormData] = useState<UserCustomization>(() => ({
+    ...customization,
+    userName: customization.userName || currentUser?.name || 'Usuario Studio',
+    userRole: customization.userRole || (currentUser ? getRoleDisplayName(currentUser.role) : 'Usuario'),
+    userAvatar: customization.userAvatar || currentUser?.avatar || '',
+  }))
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        ...customization,
+        userName: customization.userName || currentUser?.name || 'Usuario Studio',
+        userRole: customization.userRole || (currentUser ? getRoleDisplayName(currentUser.role) : 'Usuario'),
+        userAvatar: customization.userAvatar || currentUser?.avatar || '',
+      })
+    }
+  }, [isOpen, customization, currentUser])
   const [botKeys, setBotKeys] = useState<Record<string, string>>(() => {
     const keys: Record<string, string> = {}
     if (typeof window !== 'undefined') {
@@ -150,7 +171,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
           keys[a.id] = localStorage.getItem(`amyet_custom_key_${a.id}`) || ''
         })
       }
-      catch (e) {
+      catch {
         // ignore
       }
     }
@@ -200,7 +221,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
           }
         })
       }
-      catch (e) {
+      catch {
         // ignore
       }
     }
@@ -578,6 +599,40 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Comportamiento del Chat: Enviar con Enter */}
+              <div className="space-y-2.5 pt-4 border-t border-inherit">
+                <label className="font-semibold text-slate-300 block">Comportamiento del Teclado</label>
+                <div
+                  onClick={() => setFormData(prev => ({ ...prev, sendOnEnter: !prev.sendOnEnter }))}
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                    darkMode ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="space-y-0.5 pr-3">
+                    <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                      <span>Enviar mensaje con tecla Enter</span>
+                      {formData.sendOnEnter && (
+                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded-md font-mono">
+                          Habilitado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      {formData.sendOnEnter
+                        ? 'Presiona Enter para enviar directamente y Shift + Enter para salto de línea.'
+                        : 'Presiona Enter para salto de línea y Ctrl/Cmd + Enter (o botón Enviar) para enviar.'}
+                    </p>
+                  </div>
+                  <div
+                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 shrink-0 ${
+                      formData.sendOnEnter ? 'bg-emerald-500 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
+                  >
+                    <div className="bg-white w-4 h-4 rounded-full shadow-md transform duration-200" />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -635,7 +690,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
               </div>
 
               <div className="space-y-3">
-                {AGENTS_LIST.map((agent) => {
+                {(currentUser?.allowed_bots ? AGENTS_LIST.filter(a => currentUser.allowed_bots.includes(a.id)) : AGENTS_LIST).map((agent) => {
                   const hasCustomKey = Boolean(botKeys[agent.id]?.trim())
                   const hasEnvKey = Boolean(agent.apiKey)
                   return (
