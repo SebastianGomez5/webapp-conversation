@@ -23,15 +23,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ authenticated: false, user: null })
     }
 
-    // Asegurar que los bots permitidos estén actualizados
-    if (!payload.allowed_bots || payload.allowed_bots.length === 0) {
-      payload.allowed_bots = getAllowedBotsForRoles(payload.roles || [payload.role])
-    }
+    // Asegurar que los bots permitidos siempre se sincronicen con la configuración actual de roles
+    const currentAllowedBots = getAllowedBotsForRoles(payload.roles || [payload.role])
+    const botsChanged = JSON.stringify(payload.allowed_bots) !== JSON.stringify(currentAllowedBots)
+    payload.allowed_bots = currentAllowedBots
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: true,
       user: payload,
     })
+
+    // Si la lista de bots cambió (por ejemplo, se añadió DENOVA), actualizamos la cookie de sesión
+    if (botsChanged) {
+      const token = Buffer.from(JSON.stringify(payload)).toString('base64url')
+      const maxAge = 30 * 24 * 60 * 60
+      response.cookies.set('auth_session', token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge,
+      })
+    }
+
+    return response
   }
   catch (error: any) {
     return NextResponse.json(

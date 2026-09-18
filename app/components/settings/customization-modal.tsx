@@ -682,7 +682,7 @@ export const CustomizationModal: FC<ICustomizationModalProps> = ({
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
                 <div className="flex items-center gap-2 font-semibold text-xs text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Configuración Centralizada de los 7 Bots</span>
+                  <span>Configuración Centralizada de los Bots</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Ingresa las API Keys generadas en Dify para cada agente aquí o configúralas en el archivo <code className="text-emerald-300 font-mono text-[10px]">.env.local</code>. Si dejas una clave vacía, usará la conexión operativa por defecto.

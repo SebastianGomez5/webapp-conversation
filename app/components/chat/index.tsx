@@ -464,7 +464,7 @@ const Chat: FC<IChatProps> = ({
                       >
                         <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-inherit pb-1.5 mb-1.5">
                           <span>Seleccionar Agente Dify</span>
-                          <span className="text-[9px] text-emerald-400 font-mono font-bold">7 Bots Activos</span>
+                          <span className="text-[9px] text-emerald-400 font-mono font-bold">{agentsList.length} Bots Activos</span>
                         </div>
 
                         <div className="space-y-1">

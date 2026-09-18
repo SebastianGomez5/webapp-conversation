@@ -10,6 +10,7 @@ export interface AgentConfig {
   apiKeyEnvVar: string
   apiKey: string
   appId: string
+  apiUrl?: string
   welcomeMessage: string
   suggestedQuestions: string[]
 }
@@ -146,6 +147,26 @@ export const AGENTS_LIST: AgentConfig[] = [
       'Diseña la arquitectura técnica de un ecosistema multicliente',
       'Plan de escalabilidad y seguridad para base de datos y VPS',
       'Roadmap tecnológico para automatización completa del negocio',
+    ],
+  },
+  {
+    id: 'denova',
+    name: 'DENOVA',
+    role: 'Especialista Web Denova',
+    subtitle: 'Sitio Web & Ecosistema Denova',
+    desc: 'Agente especializado en el sitio web de Denova, catálogo, contenidos, soporte y consultas técnicas de su plataforma.',
+    avatar: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=150&auto=format&fit=crop&q=80',
+    accentColor: 'cyan',
+    badgeColor: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+    apiKeyEnvVar: 'NEXT_PUBLIC_DENOVA_API_KEY',
+    apiKey: process.env.NEXT_PUBLIC_DENOVA_API_KEY || 'app-SjJfGK20G3sKYrarTUwyDus0',
+    appId: process.env.NEXT_PUBLIC_DENOVA_APP_ID || 'bb90e4d4-86ed-4ef3-bbf7-bf42dfa1d178',
+    apiUrl: process.env.NEXT_PUBLIC_DENOVA_API_URL || 'https://agents.elestructurador.com/v1',
+    welcomeMessage: '🌐 ¡Hola! Soy el asistente especializado para el sitio web de Denova. ¿En qué optimización, catálogo, contenido o consulta técnica de Denova te ayudo hoy?',
+    suggestedQuestions: [
+      '¿Cuáles son los productos y servicios destacados en Denova?',
+      'Revisa y optimiza la estructura de contenidos de Denova',
+      'Estrategia de conversión y soporte para clientes de Denova',
     ],
   },
 ]

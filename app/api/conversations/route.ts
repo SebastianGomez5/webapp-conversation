@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const specificBotId = request.headers.get('x-bot-id') || request.nextUrl.searchParams.get('bot_id') || botId
     const specificAgent = AGENTS_LIST.find(a => a.id === specificBotId) || AGENTS_LIST[0]
     const customKey = request.headers.get('x-bot-api-key')
-    const client = new ChatClient(customKey || specificAgent.apiKey || API_KEY, API_URL || undefined)
+    const client = new ChatClient(customKey || specificAgent.apiKey || API_KEY, specificAgent.apiUrl || API_URL || undefined)
     const userForBot = `user_${specificAgent.id}:${sessionId}`
     try {
       const { data }: any = await client.getConversations(userForBot)
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const results = await Promise.allSettled(
       AGENTS_LIST.map(async (agent) => {
         const userForBot = `user_${agent.id}:${sessionId}`
-        const agentClient = new ChatClient(agent.apiKey || API_KEY, API_URL || undefined)
+        const agentClient = new ChatClient(agent.apiKey || API_KEY, agent.apiUrl || API_URL || undefined)
         const res: any = await agentClient.getConversations(userForBot).catch(() => ({ data: [] }))
         const rawList = Array.isArray(res?.data?.data)
           ? res.data.data

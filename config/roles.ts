@@ -12,7 +12,7 @@ export const WP_ROLES_MAP: Record<string, RoleMapping> = {
     roleId: 'administrator',
     roleName: 'Administrador General',
     department: 'Dirección General',
-    allowedBots: ['carlos', 'wendy', 'jessica', 'donald', 'elliot', 'bobby', 'darius'],
+    allowedBots: ['carlos', 'wendy', 'jessica', 'donald', 'elliot', 'bobby', 'darius', 'denova'],
   },
   um_operaciones: {
     roleId: 'um_operaciones',

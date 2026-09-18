@@ -67,7 +67,8 @@ export const getClient = (request?: NextRequest) => {
   const botId = request.headers.get('x-bot-id')
   const agent = getAgentById(botId || undefined)
   const activeKey = customKey || agent.apiKey || API_KEY
-  return new ChatClient(activeKey, API_URL || undefined)
+  const activeUrl = agent.apiUrl || API_URL || undefined
+  return new ChatClient(activeKey, activeUrl)
 }
 
 export const client = new ChatClient(API_KEY, API_URL || undefined)

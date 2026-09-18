@@ -100,10 +100,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Asegurar que los bots permitidos coincidan con los roles
-    if (!authUser.allowed_bots || authUser.allowed_bots.length === 0) {
-      authUser.allowed_bots = getAllowedBotsForRoles(authUser.roles || [authUser.role])
-    }
+    // Asegurar que los bots permitidos coincidan con la definición más reciente de roles
+    authUser.allowed_bots = getAllowedBotsForRoles(authUser.roles || [authUser.role])
 
     // Generar token de sesión en Base64 seguro
     const sessionPayload = {

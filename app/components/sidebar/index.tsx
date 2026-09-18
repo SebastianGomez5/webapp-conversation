@@ -41,6 +41,7 @@ const BOT_BADGE_CONFIG: Record<string, { dot: string, activeGlow: string, text: 
   elliot: { dot: 'bg-cyan-400', activeGlow: 'shadow-cyan-400/80 ring-cyan-400/40', text: 'text-cyan-400', name: 'Elliot' },
   bobby: { dot: 'bg-yellow-400', activeGlow: 'shadow-yellow-400/80 ring-yellow-400/40', text: 'text-yellow-400', name: 'Bobby' },
   darius: { dot: 'bg-blue-400', activeGlow: 'shadow-blue-400/80 ring-blue-400/40', text: 'text-blue-400', name: 'Darius' },
+  denova: { dot: 'bg-teal-400', activeGlow: 'shadow-teal-400/80 ring-teal-400/40', text: 'text-teal-400', name: 'Denova' },
 }
 
 const Sidebar: FC<ISidebarProps> = ({
