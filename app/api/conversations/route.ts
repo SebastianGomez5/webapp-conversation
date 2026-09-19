@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
         ...item,
         botId: specificAgent.id,
       }))
+      list.sort((a: any, b: any) => {
+        const timeA = Math.max(Number(a.updated_at || 0), Number(a.created_at || 0))
+        const timeB = Math.max(Number(b.updated_at || 0), Number(b.created_at || 0))
+        return timeB - timeA
+      })
       return NextResponse.json({ data: list }, {
         headers: setSession(sessionId, specificBotId),
       })
@@ -59,10 +64,10 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Ordenar cronológicamente descendente (más recientes primero)
+    // Ordenar cronológicamente descendente por última interacción (updated_at primero, fallback a created_at)
     allConversations.sort((a, b) => {
-      const timeA = a.created_at || a.updated_at || 0
-      const timeB = b.created_at || b.updated_at || 0
+      const timeA = Math.max(Number(a.updated_at || 0), Number(a.created_at || 0))
+      const timeB = Math.max(Number(b.updated_at || 0), Number(b.created_at || 0))
       return timeB - timeA
     })
 

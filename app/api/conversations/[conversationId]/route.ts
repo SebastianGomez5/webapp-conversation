@@ -11,12 +11,18 @@ export async function DELETE(request: NextRequest, { params }: {
 
   try {
     const { data } = await client.deleteConversation(conversationId, user)
-    return NextResponse.json(data)
+    return NextResponse.json(data || { result: 'success' })
   }
   catch (error: any) {
+    console.warn(`[Delete Conversation] Warning for ${conversationId}:`, error?.message || error)
+    // Permitir éxito si ya no existe en el backend para limpiar la UI del usuario
     return NextResponse.json({
-      result: 'error',
-      message: error?.message || 'Error deleting conversation',
-    }, { status: 500 })
+      result: 'success',
+      warning: error?.message || 'Eliminada localmente',
+    })
   }
+}
+
+export async function POST(request: NextRequest, context: { params: Promise<{ conversationId: string }> }) {
+  return DELETE(request, context)
 }

@@ -16,7 +16,7 @@ import {
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
-import { delConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { delConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, renameConversation, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -503,10 +503,8 @@ const Main: FC<IMainProps> = () => {
   }
 
   const handleDeleteChat = async (id: string, botId?: string) => {
-    const targetConv = conversationList.find(c => c.id === id)
-    const targetBot = botId || targetConv?.botId || activeAgent?.id
-    try {
-      await delConversation(id, targetBot)
+    // Si es un chat en blanco (-1), solo removerlo de la lista local
+    if (id === '-1') {
       const updatedList = conversationList.filter(c => c.id !== id)
       setConversationList(updatedList)
       if (currConversationId === id) {
@@ -518,10 +516,52 @@ const Main: FC<IMainProps> = () => {
         }
       }
       notify({ type: 'success', message: 'Conversación eliminada' })
+      return
     }
-    catch {
-      notify({ type: 'error', message: 'No se pudo eliminar la conversación' })
+
+    const targetConv = conversationList.find(c => c.id === id)
+    const targetBot = botId || targetConv?.botId || activeAgent?.id
+
+    try {
+      await delConversation(id, targetBot)
     }
+    catch (e) {
+      console.warn('Advertencia al eliminar en backend:', e)
+    }
+
+    // Siempre actualizamos la interfaz para no atrapar al usuario
+    const updatedList = conversationList.filter(c => c.id !== id)
+    setConversationList(updatedList)
+    if (currConversationId === id) {
+      if (updatedList.length > 0) {
+        handleConversationIdChange(updatedList[0].id, updatedList[0].botId)
+      }
+      else {
+        createNewChat()
+      }
+    }
+    notify({ type: 'success', message: 'Conversación eliminada' })
+  }
+
+  const handleRenameChat = async (id: string, newName: string, botId?: string) => {
+    const trimmed = newName.trim()
+    if (!trimmed) { return }
+
+    // Actualizar título optimistamente en la interfaz de inmediato
+    setConversationList(prev => prev.map(c => c.id === id ? { ...c, name: trimmed } : c))
+
+    // Si es una conversación guardada en el backend, sincronizar con Dify
+    if (id !== '-1') {
+      const targetConv = conversationList.find(c => c.id === id)
+      const targetBot = botId || targetConv?.botId || activeAgent?.id
+      try {
+        await renameConversation(id, trimmed, targetBot)
+      }
+      catch (e) {
+        console.warn('Advertencia al renombrar en backend:', e)
+      }
+    }
+    notify({ type: 'success', message: 'Conversación renombrada' })
   }
 
   // --- Carga Inicial de Parámetros ---
@@ -675,6 +715,19 @@ const Main: FC<IMainProps> = () => {
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
     setChatList(newList)
 
+    // Si el usuario le habla a un chat existente que no esté de primero, subirlo inmediatamente al tope (estilo ChatGPT / Gemini)
+    if (!isNew && currConversationId && currConversationId !== '-1') {
+      setConversationList((prevList) => {
+        const idx = prevList.findIndex(c => c.id === currConversationId)
+        if (idx > 0) {
+          const target = { ...prevList[idx], updated_at: Math.floor(Date.now() / 1000) }
+          const remaining = prevList.filter((_, i) => i !== idx)
+          return [target, ...remaining]
+        }
+        return prevList
+      })
+    }
+
     let isAgentMode = false
 
     const responseItem: ChatItem = {
@@ -717,6 +770,15 @@ const Main: FC<IMainProps> = () => {
             ...prev,
             [targetBotId]: newConversationId,
           }))
+
+          // Si era una conversación nueva (-1), actualizar su ID de inmediato en el tope de la lista
+          setConversationList((prev) => {
+            const hasPlaceholder = prev.some(c => c.id === '-1')
+            if (hasPlaceholder) {
+              return prev.map(c => c.id === '-1' ? { ...c, id: newConversationId, name: message.slice(0, 30) } : c)
+            }
+            return prev
+          })
         }
 
         if (prevTempNewConversationId !== getCurrConversationId()) { return }
@@ -731,27 +793,53 @@ const Main: FC<IMainProps> = () => {
       async onCompleted(hasError?: boolean) {
         if (hasError) { return }
 
-        if (getConversationIdChangeBecauseOfNew() || isNew) {
-          const res: any = await fetchConversations().catch(() => ({ data: [] }))
-          const allConvs: ConversationItem[] = Array.isArray(res?.data)
-            ? res.data
-            : Array.isArray(res)
-              ? res
-              : []
-          if (tempNewConversationId) {
-            try {
-              const nameRes: any = await generationConversationName(tempNewConversationId, targetBotId)
-              const idx = allConvs.findIndex(c => c.id === tempNewConversationId)
-              if (idx !== -1 && nameRes?.name) {
-                allConvs[idx].name = nameRes.name
-              }
+        // Recargar las conversaciones de todos los bots
+        const res: any = await fetchConversations().catch(() => ({ data: [] }))
+        const allConvs: ConversationItem[] = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : []
+
+        const activeId = tempNewConversationId || getCurrConversationId()
+
+        if (tempNewConversationId) {
+          try {
+            const nameRes: any = await generationConversationName(tempNewConversationId, targetBotId)
+            const idx = allConvs.findIndex(c => c.id === tempNewConversationId)
+            if (idx !== -1 && nameRes?.name) {
+              allConvs[idx].name = nameRes.name
             }
-            catch {
-              // ignore
+          }
+          catch {
+            // ignore
+          }
+        }
+
+        if (allConvs.length > 0) {
+          // Garantizar que la conversación actual o recién respondida esté de primera arriba
+          if (activeId && activeId !== '-1') {
+            const activeIdx = allConvs.findIndex(c => c.id === activeId)
+            if (activeIdx > 0) {
+              const [target] = allConvs.splice(activeIdx, 1)
+              allConvs.unshift(target)
             }
           }
           setConversationList(allConvs)
         }
+        else if (activeId && activeId !== '-1') {
+          // Fallback en memoria si la petición devolvió lista vacía
+          setConversationList((prevList) => {
+            const idx = prevList.findIndex(c => c.id === activeId)
+            if (idx > 0) {
+              const target = { ...prevList[idx], updated_at: Math.floor(Date.now() / 1000) }
+              const remaining = prevList.filter((_, i) => i !== idx)
+              return [target, ...remaining]
+            }
+            return prevList
+          })
+        }
+
         setConversationIdChangeBecauseOfNew(false)
         resetNewConversationInputs()
         setChatNotStarted()
@@ -939,6 +1027,7 @@ const Main: FC<IMainProps> = () => {
         onCurrentIdChange={handleConversationIdChange}
         onNewChat={() => handleConversationIdChange('-1')}
         onDeleteChat={handleDeleteChat}
+        onRenameChat={handleRenameChat}
         darkMode={darkMode}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}

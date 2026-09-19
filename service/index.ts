@@ -1,5 +1,5 @@
 import type { IOnCompleted, IOnData, IOnError, IOnFile, IOnMessageEnd, IOnMessageReplace, IOnNodeFinished, IOnNodeStarted, IOnThought, IOnWorkflowFinished, IOnWorkflowStarted } from './base'
-import { get, post, ssePost } from './base'
+import { del, get, post, ssePost } from './base'
 import type { Feedbacktype } from '@/types/app'
 
 export const sendChatMessage = async (
@@ -73,8 +73,14 @@ export const generationConversationName = async (id: string, botId?: string) => 
 }
 
 export const delConversation = async (id: string, botId?: string) => {
-  return post(`conversations/${id}`, {
-    method: 'DELETE',
+  return del(`conversations/${id}`, {
+    headers: botId ? { 'x-bot-id': botId } : undefined,
+  })
+}
+
+export const renameConversation = async (id: string, name: string, botId?: string) => {
+  return post(`conversations/${id}/name`, {
+    body: { name, auto_generate: false },
     headers: botId ? { 'x-bot-id': botId } : undefined,
   })
 }

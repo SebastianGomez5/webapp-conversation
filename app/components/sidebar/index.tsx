@@ -1,13 +1,15 @@
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import type { FC } from 'react'
 import {
+  Check,
+  LogOut,
+  Pencil,
   Plus,
   Search,
-  Trash2,
   Settings,
+  Trash2,
   X,
-  LogOut,
 } from 'lucide-react'
 import type { ConversationItem } from '@/types/app'
 import type { UserCustomization } from '@/app/components/settings/customization-modal'
@@ -20,6 +22,7 @@ export interface ISidebarProps {
   onCurrentIdChange: (id: string, botId?: string) => void
   onNewChat: () => void
   onDeleteChat?: (id: string, botId?: string) => void
+  onRenameChat?: (id: string, newName: string, botId?: string) => void
   darkMode: boolean
   sidebarOpen: boolean
   onToggleSidebar?: () => void
@@ -50,6 +53,7 @@ const Sidebar: FC<ISidebarProps> = ({
   onCurrentIdChange,
   onNewChat,
   onDeleteChat,
+  onRenameChat,
   darkMode,
   sidebarOpen,
   onToggleSidebar,
@@ -61,6 +65,34 @@ const Sidebar: FC<ISidebarProps> = ({
   currentUser,
   onLogout,
 }) => {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState<string>('')
+
+  const startEditing = (e: React.MouseEvent, chat: ConversationItem) => {
+    e.stopPropagation()
+    setEditingId(chat.id)
+    setEditingName(chat.name || '')
+  }
+
+  const cancelEditing = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setEditingId(null)
+    setEditingName('')
+  }
+
+  const saveEditing = (e?: React.MouseEvent | React.FormEvent, chat?: ConversationItem) => {
+    e?.stopPropagation()
+    if (!editingId) {
+      return
+    }
+    const trimmed = editingName.trim()
+    if (trimmed && onRenameChat) {
+      onRenameChat(editingId, trimmed, chat?.botId)
+    }
+    setEditingId(null)
+    setEditingName('')
+  }
+
   const filteredList = list.filter(item =>
     (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
   )
@@ -203,39 +235,104 @@ const Sidebar: FC<ISidebarProps> = ({
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                {/* Puntico con el color distintivo del Agente */}
-                <div
-                  className={`h-2.5 w-2.5 rounded-full shrink-0 transition-all ${botCfg.dot} ${
-                    isActive ? `shadow-md ring-2 ${botCfg.activeGlow} scale-110` : 'opacity-70 group-hover:opacity-100'
-                  }`}
-                  title={`Agente: ${botCfg.name}`}
-                />
-
-                {sidebarOpen && (
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="truncate font-medium">{chat.name || 'Nueva conversación'}</span>
-                      <span className={`text-[9px] font-mono font-semibold shrink-0 opacity-80 ${botCfg.text}`}>
-                        {botCfg.name}
-                      </span>
-                    </div>
+              {editingId === chat.id
+                ? (
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveEditing(e, chat)
+                        }
+                        else if (e.key === 'Escape') {
+                          cancelEditing()
+                        }
+                      }}
+                      className={`w-full text-xs px-2 py-1 rounded-md border outline-none font-medium ${
+                        darkMode
+                          ? 'bg-slate-900 border-slate-600 text-white focus:border-cyan-400'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={e => saveEditing(e, chat)}
+                      className="p-1 hover:text-emerald-400 text-slate-400 transition-colors shrink-0"
+                      title="Guardar título"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      className="p-1 hover:text-rose-400 text-slate-400 transition-colors shrink-0"
+                      title="Cancelar"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                )}
-              </div>
+                )
+                : (
+                  <>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Puntico con el color distintivo del Agente */}
+                      <div
+                        className={`h-2.5 w-2.5 rounded-full shrink-0 transition-all ${botCfg.dot} ${
+                          isActive ? `shadow-md ring-2 ${botCfg.activeGlow} scale-110` : 'opacity-70 group-hover:opacity-100'
+                        }`}
+                        title={`Agente: ${botCfg.name}`}
+                      />
 
-              {sidebarOpen && onDeleteChat && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteChat(chat.id, chat.botId)
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity shrink-0"
-                  title="Eliminar chat"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
+                      {sidebarOpen && (
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span
+                              className="truncate font-medium"
+                              onDoubleClick={e => startEditing(e, chat)}
+                              title="Doble clic para renombrar"
+                            >
+                              {chat.name || 'Nueva conversación'}
+                            </span>
+                            <span className={`text-[9px] font-mono font-semibold shrink-0 opacity-80 ${botCfg.text}`}>
+                              {botCfg.name}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {sidebarOpen && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {onRenameChat && (
+                          <button
+                            type="button"
+                            onClick={e => startEditing(e, chat)}
+                            className="p-1 hover:text-cyan-400 text-slate-400 transition-colors"
+                            title="Renombrar chat"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {onDeleteChat && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDeleteChat(chat.id, chat.botId)
+                            }}
+                            className="p-1 hover:text-rose-400 text-slate-400 transition-colors"
+                            title="Eliminar chat"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
             </div>
           )
         })}
