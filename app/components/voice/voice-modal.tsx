@@ -486,7 +486,7 @@ export const VoiceModal: FC<IVoiceModalProps> = ({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setShowAgentPicker(!showAgentPicker)}
+              onClick={() => setShowAgentPicker(true)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
                 darkMode
                   ? 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/60 text-slate-200'
@@ -504,51 +504,9 @@ export const VoiceModal: FC<IVoiceModalProps> = ({
               </span>
               <ChevronDown className="h-3.5 w-3.5 opacity-60" />
             </button>
-
-            {/* Menú de cambio de bot */}
-            {showAgentPicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 bg-transparent"
-                  onClick={() => setShowAgentPicker(false)}
-                />
-                <div
-                  className={`absolute left-0 top-full mt-2 w-72 rounded-2xl border p-2 shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-thin ${
-                    darkMode ? 'bg-[#0E1422] border-slate-800 text-slate-200' : 'bg-white border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-inherit mb-1">
-                    Cambiar Asistente de Voz
-                  </div>
-                  {agentsList.map(agent => (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectAgent?.(agent)
-                        setShowAgentPicker(false)
-                        stopSpeaking()
-                        startListening()
-                      }}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${
-                        activeAgent.id === agent.id
-                          ? darkMode ? 'bg-slate-800 text-white font-bold' : 'bg-slate-100 text-slate-900 font-bold'
-                          : darkMode ? 'hover:bg-slate-800/60 text-slate-300' : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <img src={agent.avatar} alt={agent.name} className="h-6 w-6 rounded-full object-cover" />
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="truncate">{agent.name}</span>
-                        <span className="text-[10px] text-slate-400 truncate">{agent.role}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
 
-          {/* Botón de Cerrar */}
+          {/* Botón de Cerrar Modal de Voz */}
           <button
             type="button"
             onClick={onClose}
@@ -558,6 +516,80 @@ export const VoiceModal: FC<IVoiceModalProps> = ({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Modal Elegante de Selección de Asistente (Sin cruces con el orbe) */}
+        {showAgentPicker && (
+          <div className="absolute inset-0 z-50 bg-[#080C14]/95 backdrop-blur-2xl p-6 sm:p-8 flex flex-col justify-between animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                <span className="text-sm font-bold text-white tracking-wide">
+                  Seleccionar Asistente de Voz
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAgentPicker(false)}
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Cuadrícula / Lista cómoda de Agentes */}
+            <div className="w-full flex-1 overflow-y-auto py-4 pr-1 my-2 space-y-2 max-h-[440px] scrollbar-thin">
+              {agentsList.map((agent) => {
+                const isCurrent = activeAgent.id === agent.id
+                return (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectAgent?.(agent)
+                      setShowAgentPicker(false)
+                      stopSpeaking()
+                      startListening()
+                    }}
+                    className={`w-full flex items-center gap-3.5 p-3 rounded-2xl text-left transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-slate-800/90 border border-cyan-500/50 text-white font-semibold shadow-lg shadow-cyan-500/10'
+                        : 'bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800/80 text-slate-300 hover:text-white hover:border-slate-700'
+                    }`}
+                  >
+                    <img
+                      src={agent.avatar}
+                      alt={agent.name}
+                      className={`h-11 w-11 rounded-full object-cover border-2 ${
+                        isCurrent ? 'border-cyan-400' : 'border-slate-700'
+                      } shadow-md shrink-0`}
+                    />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold tracking-tight">{agent.name}</span>
+                        {isCurrent && (
+                          <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/40 font-semibold">
+                            En conversación
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 mt-0.5 truncate">{agent.role}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="w-full pt-2 border-t border-slate-800/80 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAgentPicker(false)}
+                className="px-4 py-2 rounded-full text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                Volver a la conversación
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Centro: Orbe Interactivo & Estado */}
         <div className="flex flex-col items-center justify-center my-auto z-10 w-full max-w-md">
@@ -593,7 +625,6 @@ export const VoiceModal: FC<IVoiceModalProps> = ({
               }
             }}
             className="relative flex items-center justify-center cursor-pointer group py-4 select-none"
-            title={voiceState === 'speaking' ? 'Toca para interrumpir y hablar' : 'Toca para enviar'}
           >
             {/* Anillos de expansión según el estado */}
             <div
