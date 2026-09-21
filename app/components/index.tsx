@@ -8,9 +8,7 @@ import {
   Sun,
   Moon,
   Headphones,
-  Radio,
   Globe,
-  X,
   Menu,
 } from 'lucide-react'
 import useConversation from '@/hooks/use-conversation'
@@ -33,6 +31,7 @@ import { AGENTS_LIST, getAgentById } from '@/config/agents'
 import type { AgentConfig } from '@/config/agents'
 import LoginView from '@/app/components/auth/login-view'
 import type { AuthenticatedUser } from '@/config/roles'
+import VoiceModal from '@/app/components/voice/voice-modal'
 import { getRoleDisplayName } from '@/config/roles'
 
 export interface IMainProps {
@@ -665,7 +664,16 @@ const Main: FC<IMainProps> = () => {
     setChatList(newListWithAnswer)
   }
 
-  const handleSend = async (message: string, files?: VisionFile[]) => {
+  const handleSend = async (
+    message: string,
+    files?: VisionFile[],
+    voiceCallbacks?: {
+      onChunk?: (chunk: string) => void
+      onComplete?: (fullText: string) => void
+      onError?: (err: any) => void
+      onThought?: (status: string) => void
+    },
+  ) => {
     if (isResponding) {
       notify({ type: 'info', message: t('app.errorMessage.waitForResponse') })
       return
@@ -752,6 +760,7 @@ const Main: FC<IMainProps> = () => {
       },
       onData: (msgChunk: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId }: any) => {
         responseItem.content = responseItem.content + msgChunk
+        voiceCallbacks?.onChunk?.(msgChunk)
         if (isAgentMode) {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
           if (lastThought && !lastThought.tool) {
@@ -846,6 +855,13 @@ const Main: FC<IMainProps> = () => {
         if (tempNewConversationId) {
           setCurrConversationId(tempNewConversationId, APP_ID, true)
         }
+
+        // Obtener la respuesta final completa (sea por content directo, thought del agente, o message_replace)
+        const nonToolThoughts = (responseItem.agent_thoughts || []).filter(item => !item.tool && Boolean(item.thought))
+        const finalThoughtText = nonToolThoughts[nonToolThoughts.length - 1]?.thought || ''
+        const currentInList = getChatList().find(item => item.id === responseItem.id)?.content || ''
+        const fullAnswer = responseItem.content || currentInList || finalThoughtText || ''
+        voiceCallbacks?.onComplete?.(fullAnswer)
         setRespondingFalse()
       },
       onFile(file) {
@@ -866,18 +882,33 @@ const Main: FC<IMainProps> = () => {
           response.id = thought.message_id
           hasSetResponseId = true
         }
+
+        if (thought.tool) {
+          voiceCallbacks?.onThought?.(`Ejecutando ${thought.tool}...`)
+        } else if (thought.thought) {
+          voiceCallbacks?.onThought?.('Pensando respuesta...')
+        }
+
         if (response.agent_thoughts.length === 0) {
           response.agent_thoughts.push(thought)
         }
         else {
           const lastThought = response.agent_thoughts[response.agent_thoughts.length - 1]
           if (lastThought.id === thought.id) {
-            thought.thought = lastThought.thought
-            thought.message_files = lastThought.message_files
+            thought.thought = (thought.thought || '') || lastThought.thought
+            thought.message_files = thought.message_files || lastThought.message_files
             responseItem.agent_thoughts![response.agent_thoughts.length - 1] = thought
           }
           else {
             responseItem.agent_thoughts!.push(thought)
+          }
+        }
+
+        // Si el thought contiene texto de respuesta del agente y aún no se ha recibido por onData
+        if (!thought.tool && thought.thought) {
+          if (!responseItem.content || !responseItem.content.includes(thought.thought)) {
+            responseItem.content = thought.thought
+            voiceCallbacks?.onChunk?.(thought.thought)
           }
         }
 
@@ -908,6 +939,8 @@ const Main: FC<IMainProps> = () => {
         setChatList(newListWithAnswer)
       },
       onMessageReplace: (messageReplace) => {
+        responseItem.content = messageReplace.answer
+        voiceCallbacks?.onChunk?.(messageReplace.answer)
         setChatList(produce(
           getChatList(),
           (draft) => {
@@ -917,6 +950,7 @@ const Main: FC<IMainProps> = () => {
         ))
       },
       onError() {
+        voiceCallbacks?.onError?.(new Error('Send message error'))
         setRespondingFalse()
         setChatList(produce(getChatList(), (draft) => {
           draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
@@ -1148,52 +1182,17 @@ const Main: FC<IMainProps> = () => {
       {/* ========================================================= */}
       {/* MODAL: MODO DE VOZ REAL TIME (ORBE DINÁMICO)             */}
       {/* ========================================================= */}
-      {showVoiceOrb && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl p-4">
-          <div className={`relative w-full max-w-lg rounded-3xl p-8 text-center border shadow-2xl ${
-            darkMode ? 'bg-[#0A0E17] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
-            <button
-              onClick={() => setShowVoiceOrb(false)}
-              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-800 text-slate-400"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="space-y-6">
-              <div>
-                <span className="text-xs font-mono uppercase tracking-widest text-emerald-400">Canal de Audio Bidireccional</span>
-                <h3 className="text-xl font-bold mt-1">Asistente Ejecutivo en Vivo</h3>
-                <p className="text-xs text-slate-400 mt-1">Conectado a Reconocimiento de Voz + Motor de Conocimiento Dify</p>
-              </div>
-
-              {/* Orbe Visual Interactivo */}
-              <div className="py-8 flex justify-center items-center">
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute h-40 w-40 rounded-full bg-emerald-500/20 animate-ping"></div>
-                  <div className="absolute h-32 w-32 rounded-full bg-amber-500/20 animate-pulse"></div>
-                  <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-emerald-400 via-teal-500 to-amber-400 flex items-center justify-center shadow-lg shadow-emerald-500/40">
-                    <Radio className="h-10 w-10 text-slate-950 animate-bounce" />
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-sm font-medium text-slate-300 italic">
-                &quot;Te escucho Álvaro, habla naturalmente para actualizar clientes o revisar métricas...&quot;
-              </p>
-
-              <div className="flex justify-center gap-4 pt-4">
-                <button
-                  onClick={() => setShowVoiceOrb(false)}
-                  className="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/30"
-                >
-                  Finalizar Sesión de Voz
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <VoiceModal
+        isOpen={showVoiceOrb}
+        onClose={() => setShowVoiceOrb(false)}
+        activeAgent={activeAgent}
+        agentsList={visibleAgents}
+        onSelectAgent={handleSelectAgent}
+        onSendVoiceMessage={async (msg, callbacks) => {
+          await handleSend(msg, undefined, callbacks)
+        }}
+        darkMode={darkMode}
+      />
 
       {/* ========================================================= */}
       {/* MODAL: INGESTA DE URL / PÁGINA WEB                        */}
