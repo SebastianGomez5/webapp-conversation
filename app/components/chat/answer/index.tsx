@@ -70,7 +70,20 @@ const Answer: FC<IAnswerProps> = ({
   // Texto final de respuesta (del content o del thought final del LLM)
   const nonToolThoughts = (agent_thoughts || []).filter(item => !item.tool && Boolean(item.thought))
   const finalThoughtText = nonToolThoughts[nonToolThoughts.length - 1]?.thought || ''
-  const displayContent = content || finalThoughtText
+  const rawContent = content || finalThoughtText
+  const displayContent = (() => {
+    if (!rawContent) { return '' }
+    const trimmed = rawContent.trim()
+    if (trimmed.length > 20) {
+      const half = Math.floor(trimmed.length / 2)
+      const firstHalf = trimmed.slice(0, half).trim()
+      const secondHalf = trimmed.slice(half).trim()
+      if (firstHalf === secondHalf) {
+        return firstHalf
+      }
+    }
+    return rawContent
+  })()
 
   // Razonamiento preliminar si existe antes de herramientas
   const preliminaryThought = (agent_thoughts || [])[0]

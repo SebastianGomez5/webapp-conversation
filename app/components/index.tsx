@@ -904,14 +904,6 @@ const Main: FC<IMainProps> = () => {
           }
         }
 
-        // Si el thought contiene texto de respuesta del agente y aún no se ha recibido por onData
-        if (!thought.tool && thought.thought) {
-          if (!responseItem.content || !responseItem.content.includes(thought.thought)) {
-            responseItem.content = thought.thought
-            voiceCallbacks?.onChunk?.(thought.thought)
-          }
-        }
-
         if (prevTempNewConversationId !== getCurrConversationId()) { return }
 
         updateCurrentQA({
