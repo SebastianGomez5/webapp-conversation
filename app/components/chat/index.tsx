@@ -242,10 +242,37 @@ const Chat: FC<IChatProps> = ({
   }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastAnswerRef = useRef<HTMLDivElement>(null)
+  const wasRespondingRef = useRef(false)
+  const prevChatListLengthRef = useRef(0)
 
+  // Desplazamiento automático al final mientras se generan los tokens
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isResponding) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [chatList, isResponding])
+
+  // Cuando termina de responder (de isResponding=true a false), desplazar suavemente al inicio del mensaje del asistente
+  useEffect(() => {
+    if (wasRespondingRef.current && !isResponding) {
+      const timer = setTimeout(() => {
+        if (lastAnswerRef.current) {
+          lastAnswerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+    wasRespondingRef.current = isResponding
+  }, [isResponding])
+
+  // Desplazamiento inicial al cargar una conversación existente
+  useEffect(() => {
+    if (!isResponding && chatList.length > 0 && prevChatListLengthRef.current === 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    }
+    prevChatListLengthRef.current = chatList.length
+  }, [chatList.length, isResponding])
 
   const accent = ACCENT_COLOR_MAP[customization?.accentColor || 'emerald'] || ACCENT_COLOR_MAP.emerald
 
@@ -272,22 +299,28 @@ const Chat: FC<IChatProps> = ({
       <div className={`flex-1 overflow-y-auto px-3 sm:px-6 md:px-12 py-3 sm:py-6 space-y-3 sm:space-y-6 scrollbar-thin ${
         customization?.fontSize === 'small' ? 'text-xs' : customization?.fontSize === 'large' ? 'text-base' : 'text-sm'
       }`}>
-        {chatList.map((item) => {
+        {chatList.map((item, index) => {
+          const isLastAnswer = item.isAnswer && index === chatList.length - 1
           if (item.isAnswer) {
             return (
-              <Answer
+              <div
                 key={item.id}
-                item={item}
-                feedbackDisabled={feedbackDisabled}
-                onFeedback={onFeedback}
-                isResponding={isResponding}
-                darkMode={darkMode}
-                isSpeaking={isSpeakingMessageId === item.id}
-                onSpeakToggle={onSpeakToggle}
-                botAvatar={item.botAvatar || activeAgent?.avatar || customization?.botAvatar}
-                botName={item.botName || activeAgent?.name || customization?.botName}
-                botRole={item.botRole || activeAgent?.role}
-              />
+                ref={isLastAnswer ? lastAnswerRef : undefined}
+                className="w-full scroll-mt-4 sm:scroll-mt-6"
+              >
+                <Answer
+                  item={item}
+                  feedbackDisabled={feedbackDisabled}
+                  onFeedback={onFeedback}
+                  isResponding={isResponding}
+                  darkMode={darkMode}
+                  isSpeaking={isSpeakingMessageId === item.id}
+                  onSpeakToggle={onSpeakToggle}
+                  botAvatar={item.botAvatar || activeAgent?.avatar || customization?.botAvatar}
+                  botName={item.botName || activeAgent?.name || customization?.botName}
+                  botRole={item.botRole || activeAgent?.role}
+                />
+              </div>
             )
           }
 
