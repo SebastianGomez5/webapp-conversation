@@ -26,8 +26,8 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'emerald',
     badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_CARLOS_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_CARLOS_API_KEY || 'app-fIlrxVzyja4bfpRV41YmqI0t',
-    appId: process.env.NEXT_PUBLIC_CARLOS_APP_ID || 'ee91a6fb-c1a4-4293-9707-7268f647c4f7',
+    apiKey: process.env.NEXT_PUBLIC_CARLOS_API_KEY || '',
+    appId: process.env.NEXT_PUBLIC_CARLOS_APP_ID || '',
     welcomeMessage: '👋 ¡Hola Álvaro! Soy Carlos, Director de Operaciones. ¿En qué optimización de procesos, auditoría o gestión del ecosistema trabajamos hoy?',
     suggestedQuestions: [
       '¿Cuál es el estado operativo de los embudos y carritos?',
@@ -45,7 +45,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'rose',
     badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_WENDY_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_WENDY_API_KEY || 'app-oWsZkarmRo0dkHzQz9SGx2am',
+    apiKey: process.env.NEXT_PUBLIC_WENDY_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_WENDY_APP_ID || '',
     welcomeMessage: '✨ ¡Hola! Soy Wendy, tu Coach y Customer Success. ¿Cómo podemos mejorar la experiencia, retención o acompañamiento de nuestros clientes hoy?',
     suggestedQuestions: [
@@ -64,7 +64,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'violet',
     badgeColor: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_JESSICA_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_JESSICA_API_KEY || 'app-kAw0I2qacD1lZ2m3NC8UyFtJ',
+    apiKey: process.env.NEXT_PUBLIC_JESSICA_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_JESSICA_APP_ID || '',
     welcomeMessage: '⚖️ Saludos Álvaro, soy Jessica, Directora Legal. ¿Qué contrato, cláusula o acuerdo comercial revisamos o redactamos hoy?',
     suggestedQuestions: [
@@ -83,7 +83,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'amber',
     badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_DONALD_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_DONALD_API_KEY || 'app-5B5Uv44T6EHxjWmhZmzpYREf',
+    apiKey: process.env.NEXT_PUBLIC_DONALD_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_DONALD_APP_ID || '',
     welcomeMessage: '🔥 ¡Qué tal Álvaro! Soy Donald, Director Creativo y Comercial. ¿Qué oferta, copy de ventas o campaña comercial vamos a potenciar hoy?',
     suggestedQuestions: [
@@ -102,7 +102,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'cyan',
     badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_ELLIOT_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_ELLIOT_API_KEY || 'app-cWQBnZs1f7Owyrqttw5sScFw',
+    apiKey: process.env.NEXT_PUBLIC_ELLIOT_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_ELLIOT_APP_ID || '',
     welcomeMessage: '💻 Hola Álvaro, soy Elliot, Programador Asistente. ¿Qué script, API, webhook o integración técnica resolvemos?',
     suggestedQuestions: [
@@ -121,7 +121,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'amber',
     badgeColor: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_BOBBY_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_BOBBY_API_KEY || 'app-9lC9i8lsv5ejx2JuQQ85eRwb',
+    apiKey: process.env.NEXT_PUBLIC_BOBBY_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_BOBBY_APP_ID || '',
     welcomeMessage: '📊 Saludos Álvaro, soy Bobby, Director Financiero. ¿Qué métricas de facturación, márgenes o proyecciones de ROI analizamos hoy?',
     suggestedQuestions: [
@@ -140,7 +140,7 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'blue',
     badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_DARIUS_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_DARIUS_API_KEY || 'app-C3Xtola5DDvTLoTuwjy3RlDP',
+    apiKey: process.env.NEXT_PUBLIC_DARIUS_API_KEY || '',
     appId: process.env.NEXT_PUBLIC_DARIUS_APP_ID || '',
     welcomeMessage: '🏛️ Saludos Álvaro. Soy Darius, Director de Tecnología. ¿Qué arquitectura de sistemas, infraestructura o roadmap técnico escalamos hoy?',
     suggestedQuestions: [
@@ -159,9 +159,9 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'cyan',
     badgeColor: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_DENOVA_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_DENOVA_API_KEY || 'app-SjJfGK20G3sKYrarTUwyDus0',
-    appId: process.env.NEXT_PUBLIC_DENOVA_APP_ID || 'bb90e4d4-86ed-4ef3-bbf7-bf42dfa1d178',
-    apiUrl: process.env.NEXT_PUBLIC_DENOVA_API_URL || 'https://agents.elestructurador.com/v1',
+    apiKey: process.env.NEXT_PUBLIC_DENOVA_API_KEY || '',
+    appId: process.env.NEXT_PUBLIC_DENOVA_APP_ID || '',
+    apiUrl: process.env.NEXT_PUBLIC_DENOVA_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://agents.elestructurador.com/v1',
     welcomeMessage: '🌐 ¡Hola! Soy el asistente especializado para el sitio web de Denova. ¿En qué optimización, catálogo, contenido o consulta técnica de Denova te ayudo hoy?',
     suggestedQuestions: [
       '¿Cuáles son los productos y servicios destacados en Denova?',
@@ -179,9 +179,9 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'amber',
     badgeColor: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_AXLRODE_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_AXLRODE_API_KEY || process.env.NEXT_PUBLIC_AXELROD_API_KEY || 'app-2fObOQBACFbdiXzWWrujIENE',
-    appId: process.env.NEXT_PUBLIC_AXLRODE_APP_ID || process.env.NEXT_PUBLIC_AXELROD_APP_ID || 'ff657c03-f80e-459c-87cd-5ccb0076e0c2',
-    apiUrl: process.env.NEXT_PUBLIC_AXLRODE_API_URL || process.env.NEXT_PUBLIC_AXELROD_API_URL || 'https://agents.elestructurador.com/v1',
+    apiKey: process.env.NEXT_PUBLIC_AXLRODE_API_KEY || process.env.NEXT_PUBLIC_AXELROD_API_KEY || '',
+    appId: process.env.NEXT_PUBLIC_AXLRODE_APP_ID || process.env.NEXT_PUBLIC_AXELROD_APP_ID || '',
+    apiUrl: process.env.NEXT_PUBLIC_AXLRODE_API_URL || process.env.NEXT_PUBLIC_AXELROD_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://agents.elestructurador.com/v1',
     welcomeMessage: '💼 Saludos Álvaro. Soy Axlrode. ¿Qué estrategia de alto impacto, negociación o asignación de capital estructuramos hoy?',
     suggestedQuestions: [
       'Analiza esta oportunidad de inversión y ratio riesgo-beneficio',
@@ -199,9 +199,9 @@ export const AGENTS_LIST: AgentConfig[] = [
     accentColor: 'cyan',
     badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
     apiKeyEnvVar: 'NEXT_PUBLIC_AMYETBOT_API_KEY',
-    apiKey: process.env.NEXT_PUBLIC_AMYETBOT_API_KEY || 'app-qU82M176F3H8pKzoe02qwSJv',
-    appId: process.env.NEXT_PUBLIC_AMYETBOT_APP_ID || '50b62c1a-9208-49b0-badd-60583f4b80e1',
-    apiUrl: process.env.NEXT_PUBLIC_AMYETBOT_API_URL || 'https://agents.elestructurador.com/v1',
+    apiKey: process.env.NEXT_PUBLIC_AMYETBOT_API_KEY || '',
+    appId: process.env.NEXT_PUBLIC_AMYETBOT_APP_ID || '',
+    apiUrl: process.env.NEXT_PUBLIC_AMYETBOT_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://agents.elestructurador.com/v1',
     welcomeMessage: '🤖 ¡Hola! Soy Amyetbot, tu asistente para todo el ecosistema y plataforma de Amyet. ¿En qué tarea o consulta te colaboro hoy?',
     suggestedQuestions: [
       '¿Qué procesos y herramientas integran el sistema de Amyet?',
