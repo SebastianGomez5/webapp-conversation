@@ -462,6 +462,9 @@ export const VoiceModal: FC<IVoiceModalProps> = ({
     bobby: { aura: 'from-yellow-500/30 to-amber-500/20', border: 'border-yellow-500/40', pulse: 'bg-yellow-400', text: 'text-yellow-400' },
     darius: { aura: 'from-blue-500/30 to-sky-500/20', border: 'border-blue-500/40', pulse: 'bg-blue-400', text: 'text-blue-400' },
     denova: { aura: 'from-teal-500/30 to-cyan-500/20', border: 'border-teal-500/40', pulse: 'bg-teal-400', text: 'text-teal-400' },
+    axlrode: { aura: 'from-amber-600/30 to-orange-500/20', border: 'border-orange-500/40', pulse: 'bg-orange-400', text: 'text-orange-400' },
+    axelrod: { aura: 'from-amber-600/30 to-orange-500/20', border: 'border-orange-500/40', pulse: 'bg-orange-400', text: 'text-orange-400' },
+    amyetbot: { aura: 'from-indigo-500/30 to-blue-500/20', border: 'border-indigo-500/40', pulse: 'bg-indigo-400', text: 'text-indigo-400' },
   }
 
   const agentTheme = agentColorMap[activeAgent.id] || agentColorMap.carlos

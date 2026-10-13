@@ -12,13 +12,13 @@ export const WP_ROLES_MAP: Record<string, RoleMapping> = {
     roleId: 'administrator',
     roleName: 'Administrador General',
     department: 'Dirección General',
-    allowedBots: ['carlos', 'wendy', 'jessica', 'donald', 'elliot', 'bobby', 'darius', 'denova'],
+    allowedBots: ['carlos', 'wendy', 'jessica', 'donald', 'elliot', 'bobby', 'darius', 'denova', 'axlrode', 'axelrod', 'amyetbot'],
   },
   um_operaciones: {
     roleId: 'um_operaciones',
     roleName: 'Editor de Operaciones e Infraestructura',
     department: 'Operaciones & Sistemas',
-    allowedBots: ['carlos', 'elliot'],
+    allowedBots: ['carlos', 'elliot', 'amyetbot'],
   },
   um_marketing: {
     roleId: 'um_marketing',
@@ -42,7 +42,7 @@ export const WP_ROLES_MAP: Record<string, RoleMapping> = {
     roleId: 'um_financiero',
     roleName: 'Editor Financiero y Facturación',
     department: 'Finanzas & Facturación',
-    allowedBots: ['bobby', 'jessica'],
+    allowedBots: ['bobby', 'jessica', 'axlrode', 'axelrod'],
   },
   um_coordinacion: {
     roleId: 'um_coordinacion',

@@ -169,8 +169,48 @@ export const AGENTS_LIST: AgentConfig[] = [
       'Estrategia de conversión y soporte para clientes de Denova',
     ],
   },
+  {
+    id: 'axlrode',
+    name: 'AXLRODE',
+    role: 'Estratega de Inversión y Capital',
+    subtitle: 'Estrategia, Inversión & Visión',
+    desc: 'Especialista en alta estrategia financiera, negociación, asignación de capital y visión de negocio de alto impacto.',
+    avatar: '/axlrode.png',
+    accentColor: 'amber',
+    badgeColor: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    apiKeyEnvVar: 'NEXT_PUBLIC_AXLRODE_API_KEY',
+    apiKey: process.env.NEXT_PUBLIC_AXLRODE_API_KEY || process.env.NEXT_PUBLIC_AXELROD_API_KEY || 'app-2fObOQBACFbdiXzWWrujIENE',
+    appId: process.env.NEXT_PUBLIC_AXLRODE_APP_ID || process.env.NEXT_PUBLIC_AXELROD_APP_ID || 'ff657c03-f80e-459c-87cd-5ccb0076e0c2',
+    apiUrl: process.env.NEXT_PUBLIC_AXLRODE_API_URL || process.env.NEXT_PUBLIC_AXELROD_API_URL || 'https://agents.elestructurador.com/v1',
+    welcomeMessage: '💼 Saludos Álvaro. Soy Axlrode. ¿Qué estrategia de alto impacto, negociación o asignación de capital estructuramos hoy?',
+    suggestedQuestions: [
+      'Analiza esta oportunidad de inversión y ratio riesgo-beneficio',
+      'Estrategia de negociación para cerrar un acuerdo de alto valor',
+      'Optimización de capital y posicionamiento competitivo en el mercado',
+    ],
+  },
+  {
+    id: 'amyetbot',
+    name: 'AMYETBOT',
+    role: 'Asistente Central Amyet',
+    subtitle: 'Ecosistema & Soporte Amyet',
+    desc: 'Agente especializado en los flujos, herramientas, soporte y operaciones del ecosistema Amyet.',
+    avatar: '/amyetbot.png',
+    accentColor: 'cyan',
+    badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    apiKeyEnvVar: 'NEXT_PUBLIC_AMYETBOT_API_KEY',
+    apiKey: process.env.NEXT_PUBLIC_AMYETBOT_API_KEY || 'app-qU82M176F3H8pKzoe02qwSJv',
+    appId: process.env.NEXT_PUBLIC_AMYETBOT_APP_ID || '50b62c1a-9208-49b0-badd-60583f4b80e1',
+    apiUrl: process.env.NEXT_PUBLIC_AMYETBOT_API_URL || 'https://agents.elestructurador.com/v1',
+    welcomeMessage: '🤖 ¡Hola! Soy Amyetbot, tu asistente para todo el ecosistema y plataforma de Amyet. ¿En qué tarea o consulta te colaboro hoy?',
+    suggestedQuestions: [
+      '¿Qué procesos y herramientas integran el sistema de Amyet?',
+      'Revisión y soporte de tareas operativas en Amyet',
+      'Automatización y sincronización de datos en el tablero',
+    ],
+  },
 ]
 
 export const getAgentById = (id?: string): AgentConfig => {
-  return AGENTS_LIST.find(a => a.id === id) || AGENTS_LIST[0]
+  return AGENTS_LIST.find(a => a.id === id || (id === 'axelrod' && a.id === 'axlrode')) || AGENTS_LIST[0]
 }
