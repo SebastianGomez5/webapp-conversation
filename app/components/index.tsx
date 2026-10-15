@@ -422,12 +422,34 @@ const Main: FC<IMainProps> = () => {
           const { data } = res
           const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs, botForConv)
 
+          // Recuperar archivos guardados localmente para esta conversación
+          let localSavedFiles: any[] = []
+          try {
+            if (typeof window !== 'undefined') {
+              const savedStr = localStorage.getItem(`amyet_files_${currConversationId}`)
+              localSavedFiles = savedStr ? JSON.parse(savedStr) : []
+            }
+          }
+          catch {
+            // ignore
+          }
+
           data.forEach((item: any) => {
+            let userFiles = item.message_files?.filter((file: any) => file.belongs_to === 'user') || []
+
+            // Si Dify no devolvió los archivos adjuntos (comportamiento de Agent Apps), restaurar desde cache local
+            if (userFiles.length === 0 && localSavedFiles.length > 0) {
+              const matched = localSavedFiles.find((rec: any) => rec.query === (item.query || '').trim())
+              if (matched && Array.isArray(matched.files) && matched.files.length > 0) {
+                userFiles = matched.files
+              }
+            }
+
             newChatList.push({
               id: `question-${item.id}`,
               content: item.query,
               isAnswer: false,
-              message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
+              message_files: userFiles,
             })
             newChatList.push({
               id: item.id,
@@ -699,6 +721,38 @@ const Main: FC<IMainProps> = () => {
         }
         return item
       })
+
+      // Guardar registro de archivos localmente para persistir en recargas de página
+      try {
+        if (typeof window !== 'undefined') {
+          const fileRecord = {
+            query: message.trim(),
+            files: files.map(f => ({
+              type: f.type || 'document',
+              name: f.name || (f.url && !f.url.startsWith('http') && !f.url.startsWith('blob:') ? f.url : 'Documento adjunto'),
+              size: f.size,
+              url: f.url,
+              upload_file_id: f.upload_file_id,
+              transfer_method: f.transfer_method,
+              belongs_to: 'user',
+            })),
+            timestamp: Date.now(),
+          }
+
+          if (!isNew && currConversationId && currConversationId !== '-1') {
+            const key = `amyet_files_${currConversationId}`
+            const existing = JSON.parse(localStorage.getItem(key) || '[]')
+            existing.push(fileRecord)
+            localStorage.setItem(key, JSON.stringify(existing.slice(-30)))
+          }
+          else {
+            localStorage.setItem('amyet_pending_files', JSON.stringify(fileRecord))
+          }
+        }
+      }
+      catch {
+        // ignore
+      }
     }
 
     const questionId = `question-${Date.now()}`
@@ -854,6 +908,23 @@ const Main: FC<IMainProps> = () => {
         setChatNotStarted()
         if (tempNewConversationId) {
           setCurrConversationId(tempNewConversationId, APP_ID, true)
+          // Si había archivos pendientes de una conversación nueva, asociarlos a su nuevo ID
+          try {
+            if (typeof window !== 'undefined') {
+              const pendingStr = localStorage.getItem('amyet_pending_files')
+              if (pendingStr) {
+                const pendingRecord = JSON.parse(pendingStr)
+                const targetKey = `amyet_files_${tempNewConversationId}`
+                const existing = JSON.parse(localStorage.getItem(targetKey) || '[]')
+                existing.push(pendingRecord)
+                localStorage.setItem(targetKey, JSON.stringify(existing.slice(-30)))
+                localStorage.removeItem('amyet_pending_files')
+              }
+            }
+          }
+          catch {
+            // ignore
+          }
         }
 
         // Obtener la respuesta final completa (sea por content directo, thought del agente, o message_replace)

@@ -160,6 +160,8 @@ export interface VisionFile {
   url: string
   upload_file_id: string
   belongs_to?: string
+  name?: string
+  size?: number
 }
 
 export enum BlockEnum {

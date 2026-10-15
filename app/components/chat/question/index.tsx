@@ -1,7 +1,7 @@
 'use client'
 import type { FC } from 'react'
 import React from 'react'
-import { FileText } from 'lucide-react'
+import { Download, FileText } from 'lucide-react'
 import ImageGallery from '@/app/components/base/image-gallery'
 import { ACCENT_COLOR_MAP } from '@/app/components/settings/customization-modal'
 import type { VisionFile } from '@/types/app'
@@ -62,18 +62,48 @@ const Question: FC<IQuestionProps> = ({
             </div>
           )}
 
-          {/* Archivos / URLs adjuntos */}
+          {/* Archivos / URLs adjuntos con opción de descarga */}
           {docFiles.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {docFiles.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-black/20 text-[10px] sm:text-[11px] font-mono text-emerald-100 select-text"
-                >
-                  <FileText className="h-3 w-3 shrink-0" />
-                  <span className="truncate max-w-[140px] sm:max-w-[180px]">{file.url || 'Documento adjunto'}</span>
-                </div>
-              ))}
+            <div className="mb-2 flex flex-wrap gap-2">
+              {docFiles.map((file, idx) => {
+                const displayName = file.name || (file.url && !file.url.startsWith('http') && !file.url.startsWith('blob:') ? file.url : 'Documento adjunto')
+                const hasDownloadableUrl = file.url && (file.url.startsWith('http') || file.url.startsWith('blob:') || file.url.startsWith('data:'))
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/25 hover:bg-black/35 border border-white/10 text-xs text-white/95 transition-all shadow-sm"
+                  >
+                    <div className="p-1 rounded bg-white/10 text-emerald-300">
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                    </div>
+                    <div className="flex flex-col min-w-0 pr-1">
+                      <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium text-[11px] sm:text-xs">
+                        {displayName}
+                      </span>
+                      {file.size
+                        ? (
+                          <span className="text-[9px] text-white/60">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </span>
+                        )
+                        : null}
+                    </div>
+                    {hasDownloadableUrl && (
+                      <a
+                        href={file.url}
+                        download={file.name || displayName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+                        title="Descargar o abrir archivo"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 

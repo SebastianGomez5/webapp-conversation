@@ -217,8 +217,10 @@ const Chat: FC<IChatProps> = ({
     const visionFiles: VisionFile[] = validFiles.map(f => ({
       type: f.type as any,
       transfer_method: f.upload_file_id ? TransferMethod.local_file : TransferMethod.remote_url,
-      url: f.url || f.name,
+      url: f.url || (f.file ? URL.createObjectURL(f.file) : f.name),
       upload_file_id: f.upload_file_id || '',
+      name: f.name,
+      size: f.size,
     }))
 
     onSend(trimmed, visionFiles)
