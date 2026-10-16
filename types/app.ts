@@ -65,6 +65,7 @@ export interface IChatItem {
    * Specific message type
    */
   isAnswer: boolean
+  created_at?: number
   /**
    * The user feedback result of this message
    */

@@ -213,7 +213,11 @@ const Answer: FC<IAnswerProps> = ({
 
         {/* Acciones Inferiores del Mensaje */}
         <div className={`flex items-center gap-2 text-[11px] px-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <span>{item.created_at ? new Date(item.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora'}</span>
+          <span>
+            {item.created_at
+              ? new Date(item.created_at > 1e11 ? item.created_at : item.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
           <span>•</span>
 
           {/* Botón de Voz (TTS) */}

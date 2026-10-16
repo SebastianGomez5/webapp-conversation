@@ -7,6 +7,7 @@ import {
   MicOff,
   Send,
   ChevronDown,
+  ArrowDown,
   FileText,
   X,
   Square,
@@ -245,8 +246,26 @@ const Chat: FC<IChatProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastAnswerRef = useRef<HTMLDivElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const wasRespondingRef = useRef(false)
   const prevChatListLengthRef = useRef(0)
+
+  const handleScroll = () => {
+    if (!feedRef.current) { return }
+    const { scrollTop, scrollHeight, clientHeight } = feedRef.current
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+    setShowScrollToBottom(distanceFromBottom > 140)
+  }
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+    else if (feedRef.current) {
+      feedRef.current.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }
 
   // Desplazamiento automático al final mientras se generan los tokens
   useEffect(() => {
@@ -298,9 +317,13 @@ const Chat: FC<IChatProps> = ({
       )}
 
       {/* Feed de Mensajes */}
-      <div className={`flex-1 overflow-y-auto px-3 sm:px-6 md:px-12 py-3 sm:py-6 space-y-3 sm:space-y-6 scrollbar-thin ${
-        customization?.fontSize === 'small' ? 'text-xs' : customization?.fontSize === 'large' ? 'text-base' : 'text-sm'
-      }`}>
+      <div
+        ref={feedRef}
+        onScroll={handleScroll}
+        className={`flex-1 overflow-y-auto px-3 sm:px-6 md:px-12 py-3 sm:py-6 space-y-3 sm:space-y-6 scrollbar-thin ${
+          customization?.fontSize === 'small' ? 'text-xs' : customization?.fontSize === 'large' ? 'text-base' : 'text-sm'
+        }`}
+      >
         {chatList.map((item, index) => {
           const isLastAnswer = item.isAnswer && index === chatList.length - 1
           if (item.isAnswer) {
@@ -331,6 +354,7 @@ const Chat: FC<IChatProps> = ({
               key={item.id}
               id={item.id}
               content={item.content}
+              created_at={item.created_at}
               message_files={item.message_files}
               darkMode={darkMode}
               userAvatar={customization?.userAvatar}
@@ -344,7 +368,24 @@ const Chat: FC<IChatProps> = ({
       </div>
 
       {/* Dock de Entrada Futurista (Centro de Mando) */}
-      <div className="p-2 sm:p-4 md:px-12 md:pb-6 z-10 shrink-0">
+      <div className="p-2 sm:p-4 md:px-12 md:pb-6 z-10 shrink-0 relative">
+        {/* Botón flotante para bajar (estilo Gemini) */}
+        {showScrollToBottom && (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            aria-label="Desplazarse hacia abajo"
+            className={`absolute left-1/2 -translate-x-1/2 -top-4 sm:-top-5 z-30 h-8 w-8 sm:h-9 sm:w-9 rounded-full shadow-xl border backdrop-blur-md transition-all duration-200 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer ${
+              darkMode
+                ? 'bg-slate-800/90 hover:bg-slate-700 text-slate-200 border-slate-700/80 shadow-black/60'
+                : 'bg-white/95 hover:bg-slate-100 text-slate-700 border-slate-200 shadow-slate-300'
+            }`}
+            title="Bajar al final"
+          >
+            <ArrowDown className="h-4 w-4 text-current" />
+          </button>
+        )}
+
         <div
           className={`relative max-w-4xl mx-auto rounded-2xl border shadow-xl backdrop-blur-xl transition-all ${
             darkMode

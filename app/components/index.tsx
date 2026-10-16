@@ -380,6 +380,7 @@ const Main: FC<IMainProps> = () => {
       feedbackDisabled: true,
       isOpeningStatement: isShowPrompt,
       suggestedQuestions: questions,
+      created_at: Math.floor(Date.now() / 1000),
       botId: targetAgent?.id,
       botName: targetAgent?.name,
       botAvatar: targetAgent?.avatar,
@@ -449,6 +450,7 @@ const Main: FC<IMainProps> = () => {
               id: `question-${item.id}`,
               content: item.query,
               isAnswer: false,
+              created_at: item.created_at,
               message_files: userFiles,
             })
             newChatList.push({
@@ -457,6 +459,7 @@ const Main: FC<IMainProps> = () => {
               agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
               feedback: item.feedback,
               isAnswer: true,
+              created_at: item.created_at,
               message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
               botId: botForConv?.id,
               botName: botForConv?.name,
@@ -755,11 +758,13 @@ const Main: FC<IMainProps> = () => {
       }
     }
 
+    const nowTimestamp = Math.floor(Date.now() / 1000)
     const questionId = `question-${Date.now()}`
     const questionItem = {
       id: questionId,
       content: message,
       isAnswer: false,
+      created_at: nowTimestamp,
       message_files: files || [],
     }
 
@@ -768,6 +773,7 @@ const Main: FC<IMainProps> = () => {
       id: placeholderAnswerId,
       content: '',
       isAnswer: true,
+      created_at: nowTimestamp,
       botId: activeAgent?.id,
       botName: activeAgent?.name,
       botAvatar: activeAgent?.avatar,
@@ -798,6 +804,7 @@ const Main: FC<IMainProps> = () => {
       agent_thoughts: [],
       message_files: [],
       isAnswer: true,
+      created_at: nowTimestamp,
       botId: activeAgent?.id,
       botName: activeAgent?.name,
       botAvatar: activeAgent?.avatar,

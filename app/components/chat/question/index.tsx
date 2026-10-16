@@ -10,6 +10,7 @@ interface IQuestionProps {
   id: string
   content: string
   timestamp?: string
+  created_at?: number
   imgSrcs?: string[]
   message_files?: VisionFile[]
   darkMode?: boolean
@@ -22,6 +23,7 @@ const Question: FC<IQuestionProps> = ({
   id,
   content,
   timestamp,
+  created_at,
   imgSrcs = [],
   message_files = [],
   darkMode = true,
@@ -43,6 +45,16 @@ const Question: FC<IQuestionProps> = ({
     .join('')
     .substring(0, 2)
     .toUpperCase()
+
+  const formattedTime = (() => {
+    if (timestamp && timestamp !== 'Ahora')
+    { return timestamp }
+    if (created_at) {
+      const date = new Date(created_at > 1e11 ? created_at : created_at * 1000)
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  })()
 
   return (
     <div key={id} className="flex gap-2 sm:gap-4 max-w-4xl mx-auto justify-end w-full">
@@ -112,7 +124,7 @@ const Question: FC<IQuestionProps> = ({
 
         {/* Timestamp */}
         <div className={`flex items-center gap-2 text-[10px] sm:text-[11px] px-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <span>{timestamp || 'Ahora'}</span>
+          <span>{formattedTime}</span>
         </div>
       </div>
 
